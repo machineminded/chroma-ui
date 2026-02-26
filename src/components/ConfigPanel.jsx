@@ -198,6 +198,17 @@ function ConfigTab({
 }
 
 // ---------- History Tab ----------
+async function downloadImage(url, filename) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(blobUrl);
+}
+
 function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextImageUrl }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -230,7 +241,7 @@ function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextIma
         generatedImages.map((img, i) => (
           <div
             key={i}
-            onClick={() => setCurrentImage(img.url)}
+            onClick={() => setCurrentImage(img.url, img.filename)}
             style={{
               background: currentImage === img.url ? "#a78bfa15" : COLORS.bgDarker,
               border: `1px solid ${currentImage === img.url ? "#a78bfa44" : COLORS.border}`,
@@ -243,8 +254,20 @@ function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextIma
             <div style={{ fontSize: 10, color: "#777", marginTop: 4, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
               {img.prompt}
             </div>
-            <div style={{ fontSize: 9, color: COLORS.textDimmest, marginTop: 2 }}>
-              {img.type === "inpaint" ? "Inpaint" : "txt2img"} · Seed: {img.seed}
+            <div style={{ fontSize: 9, color: COLORS.textDimmest, marginTop: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>{img.type === "inpaint" ? "Inpaint" : img.type === "upscale" ? "Upscale" : "txt2img"} · Seed: {img.seed}</span>
+              {img.filename && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); downloadImage(img.url, img.filename); }}
+                  title={`Download ${img.filename}`}
+                  style={{
+                    background: "transparent", border: "none", color: COLORS.textDimmer,
+                    cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center",
+                  }}
+                >
+                  <Icons.Download />
+                </button>
+              )}
             </div>
           </div>
         ))

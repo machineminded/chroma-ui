@@ -34,6 +34,7 @@ export default function ChromaUI() {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusMsg, setStatusMsg] = useState("Ready");
+  const [currentImageFilename, setCurrentImageFilename] = useState(null);
   const [generatedImages, setGeneratedImages] = useState([]);
   const [currentImage, setCurrentImage] = useState(null);
 
@@ -344,8 +345,9 @@ export default function ChromaUI() {
           setCanvasSize({ w: canvasSize.w * upscaleBy, h: canvasSize.h * upscaleBy });
         }
         setCurrentImage(imageUrl);
+        setCurrentImageFilename(img.filename);
         setGeneratedImages((prev) => [
-          { url: imageUrl, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
+          { url: imageUrl, filename: img.filename, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
           ...prev,
         ]);
         setStatusMsg(genType === "upscale" ? `Upscaled ${upscaleBy}×!` : "Done!");
@@ -386,7 +388,8 @@ export default function ChromaUI() {
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <Canvas
-            canvasSize={canvasSize} currentImage={currentImage} activeTool={activeTool}
+            canvasSize={canvasSize} currentImage={currentImage} currentImageFilename={currentImageFilename}
+            activeTool={activeTool}
             generating={generating} progress={progress} statusMsg={statusMsg}
             zoom={zoom} setZoom={setZoom} panOffset={panOffset} setPanOffset={setPanOffset}
             maskCanvasRef={maskCanvasRef} hasMask={hasMask} setHasMask={setHasMask}
@@ -426,7 +429,8 @@ export default function ChromaUI() {
           betaAlpha={betaAlpha} setBetaAlpha={setBetaAlpha}
           betaBeta={betaBeta} setBetaBeta={setBetaBeta}
           seed={seed} setSeed={setSeed}
-          generatedImages={generatedImages} currentImage={currentImage} setCurrentImage={setCurrentImage}
+          generatedImages={generatedImages} currentImage={currentImage}
+          setCurrentImage={(url, filename) => { setCurrentImage(url); setCurrentImageFilename(filename ?? null); }}
           contextImageUrl={contextImageUrl}
         />
       </div>

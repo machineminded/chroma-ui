@@ -11,9 +11,21 @@ import { DEFAULTS } from "../constants";
  *  - Inpaint brush drawing
  *  - Inpaint toolbar strip when inpaint tool is active
  */
+async function downloadImage(url, filename) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(blobUrl);
+}
+
 export default function Canvas({
   canvasSize,
   currentImage,
+  currentImageFilename,
   activeTool,
   generating,
   progress,
@@ -347,6 +359,23 @@ export default function Canvas({
           backgroundImage: "radial-gradient(circle, #555 1px, transparent 1px)",
           backgroundSize: "24px 24px",
         }} />
+
+        {/* Download button */}
+        {currentImage && currentImageFilename && (
+          <button
+            onClick={() => downloadImage(currentImage, currentImageFilename)}
+            title={`Download ${currentImageFilename}`}
+            style={{
+              position: "absolute", top: 10, right: 10, zIndex: 10,
+              background: "rgba(0,0,0,0.55)", border: `1px solid ${COLORS.border}`,
+              borderRadius: 6, color: COLORS.textDim, cursor: "pointer",
+              padding: "5px 8px", display: "flex", alignItems: "center", gap: 5,
+              fontSize: 10, fontFamily: "inherit", backdropFilter: "blur(4px)",
+            }}
+          >
+            <Icons.Download /> {currentImageFilename}
+          </button>
+        )}
 
         <div
           style={{
