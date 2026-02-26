@@ -26,6 +26,7 @@ export default function ChromaUI() {
 
   // ---- Canvas ----
   const [canvasSize, setCanvasSize] = useState(CANVAS_SIZES[DEFAULT_CANVAS_INDEX]);
+  const preUpscaleCanvasSize = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
@@ -270,6 +271,7 @@ export default function ChromaUI() {
       if (isUpscale) {
         // ---- UPSCALE ----
         genType = "upscale";
+        preUpscaleCanvasSize.current = canvasSize;
         setStatusMsg("Uploading image for upscale...");
         const imageName = await uploadCurrentImage();
 
@@ -287,6 +289,8 @@ export default function ChromaUI() {
         // ---- INPAINT ----
         isInpaint = true;
         genType = "inpaint";
+        const effectiveSize = preUpscaleCanvasSize.current ?? canvasSize;
+        if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
         setStatusMsg("Uploading image + mask...");
         const { imageName, maskName } = await uploadCanvasAndMask();
 
@@ -299,16 +303,18 @@ export default function ChromaUI() {
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
           contextExtendFactor: inpaintContextExtend,
-          outputWidth: canvasSize.w,
-          outputHeight: canvasSize.h,
+          outputWidth: effectiveSize.w,
+          outputHeight: effectiveSize.h,
           contextOnly: false,
         });
       } else {
         // ---- TXT2IMG ----
+        const effectiveSize = preUpscaleCanvasSize.current ?? canvasSize;
+        if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
         setStatusMsg("Generating...");
         workflow = api.buildTxt2ImgWorkflow({
           positive, negative,
-          width: canvasSize.w, height: canvasSize.h,
+          width: effectiveSize.w, height: effectiveSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
@@ -334,6 +340,9 @@ export default function ChromaUI() {
 
       if (img) {
         const imageUrl = api.getImageUrl(serverUrl, img.filename, img.subfolder, img.type);
+        if (isUpscale) {
+          setCanvasSize({ w: canvasSize.w * upscaleBy, h: canvasSize.h * upscaleBy });
+        }
         setCurrentImage(imageUrl);
         setGeneratedImages((prev) => [
           { url: imageUrl, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
