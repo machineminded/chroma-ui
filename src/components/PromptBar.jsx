@@ -1,6 +1,6 @@
 import { COLORS } from "../styles";
 
-export default function PromptBar({ positive, setPositive, negative, setNegative, onGenerate, generating, hasMask, activeTool }) {
+export default function PromptBar({ positive, setPositive, negative, setNegative, onGenerate, generating, hasMask, activeTool, selectedStyle }) {
   const buttonLabel = generating ? "..." : activeTool === "upscale" ? "Upscale" : hasMask ? "Inpaint" : "Generate";
   return (
     <div
@@ -21,11 +21,11 @@ export default function PromptBar({ positive, setPositive, negative, setNegative
           value={positive}
           onChange={(e) => setPositive(e.target.value)}
           placeholder="Describe your image... (positive prompt)"
-          rows={2}
+          rows={3}
           style={{
             flex: 1, background: COLORS.bgDarker, border: `1px solid ${COLORS.border}`, borderRadius: 6,
             color: "#ddd", padding: "8px 10px", fontSize: 12, fontFamily: "inherit",
-            resize: "vertical", outline: "none", minHeight: 36,
+            resize: "vertical", outline: "none", minHeight: 56,
           }}
           onFocus={(e) => (e.target.style.borderColor = "#a78bfa55")}
           onBlur={(e) => (e.target.style.borderColor = COLORS.border)}
@@ -48,6 +48,18 @@ export default function PromptBar({ positive, setPositive, negative, setNegative
           {buttonLabel}
         </button>
       </div>
+      {/* Active style badge */}
+      {selectedStyle && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 32 }}>
+          <span style={{
+            fontSize: 10, color: COLORS.accent,
+            background: "#a78bfa18", border: `1px solid #a78bfa33`,
+            borderRadius: 4, padding: "2px 8px",
+          }}>
+            Style: {selectedStyle.name}
+          </span>
+        </div>
+      )}
       {/* Negative prompt */}
       <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
         <span style={{ fontSize: 10, color: COLORS.danger, minWidth: 24, paddingTop: 6, fontWeight: 600 }}>−</span>

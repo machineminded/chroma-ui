@@ -1,6 +1,7 @@
 import Icons from "./Icons";
 import { COLORS, labelStyle, inputStyle, sliderStyle, valStyle, dividerStyle, sectionHeaderStyle, selectStyle } from "../styles";
 import { CANVAS_SIZES } from "../constants";
+import StylesPanel from "./StylesPanel";
 
 export default function ConfigPanel({
   // Tab state
@@ -17,6 +18,8 @@ export default function ConfigPanel({
   canvasSize, setCanvasSize, steps, setSteps, cfg, setCfg,
   shift, setShift, betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
   seed, setSeed,
+  // Styles
+  selectedStyle, setSelectedStyle,
   // History
   generatedImages, currentImage, setCurrentImage,
   // Inpaint context preview
@@ -40,7 +43,7 @@ export default function ConfigPanel({
       <div style={{ display: "flex", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bgDarker }}>
         {[
           { icon: Icons.Settings, label: "Config" },
-          { icon: Icons.Layers, label: "Layers" },
+          { icon: Icons.Styles, label: "Styles" },
           { icon: Icons.History, label: "History" },
         ].map((tab) => (
           <button
@@ -80,10 +83,8 @@ export default function ConfigPanel({
           />
         )}
 
-        {activeTab === "Layers" && (
-          <div style={{ color: COLORS.textDimmest, fontSize: 11, textAlign: "center", padding: 20 }}>
-            Layers panel coming soon.
-          </div>
+        {activeTab === "Styles" && (
+          <StylesPanel selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle} />
         )}
 
         {activeTab === "History" && (
@@ -198,6 +199,17 @@ function ConfigTab({
 }
 
 // ---------- History Tab ----------
+async function downloadImage(url, filename) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(blobUrl);
+}
+
 function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextImageUrl }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -230,7 +242,7 @@ function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextIma
         generatedImages.map((img, i) => (
           <div
             key={i}
-            onClick={() => setCurrentImage(img.url)}
+            onClick={() => setCurrentImage(img.url, img.filename)}
             style={{
               background: currentImage === img.url ? "#a78bfa15" : COLORS.bgDarker,
               border: `1px solid ${currentImage === img.url ? "#a78bfa44" : COLORS.border}`,
@@ -243,8 +255,20 @@ function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextIma
             <div style={{ fontSize: 10, color: "#777", marginTop: 4, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
               {img.prompt}
             </div>
-            <div style={{ fontSize: 9, color: COLORS.textDimmest, marginTop: 2 }}>
-              {img.type === "inpaint" ? "Inpaint" : "txt2img"} · Seed: {img.seed}
+            <div style={{ fontSize: 9, color: COLORS.textDimmest, marginTop: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>{img.type === "inpaint" ? "Inpaint" : img.type === "upscale" ? "Upscale" : "txt2img"} · Seed: {img.seed}</span>
+              {img.filename && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); downloadImage(img.url, img.filename); }}
+                  title={`Download ${img.filename}`}
+                  style={{
+                    background: "transparent", border: "none", color: COLORS.textDimmer,
+                    cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center",
+                  }}
+                >
+                  <Icons.Download />
+                </button>
+              )}
             </div>
           </div>
         ))

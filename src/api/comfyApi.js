@@ -1,5 +1,10 @@
 // ComfyUI API layer — all communication with the ComfyUI backend
 
+function julianDayNumber() {
+  // Unix epoch (Jan 1, 1970) = JDN 2440588
+  return Math.floor(Date.now() / 86400000) + 2440588;
+}
+
 export async function queuePrompt(serverUrl, workflow) {
   const res = await fetch(`${serverUrl}/prompt`, {
     method: "POST",
@@ -218,7 +223,7 @@ export function buildTxt2ImgWorkflow({
     },
     "740": {
       class_type: "SaveImage",
-      inputs: { filename_prefix: "Chroma", images: ["298", 0] },
+      inputs: { filename_prefix: `${julianDayNumber()}`, images: ["298", 0] },
       _meta: { title: "Save Image" },
     },
     "741": {
@@ -406,7 +411,7 @@ export function buildInpaintWorkflow({
     // Full generation — add SaveImage for final stitched result
     workflow["7"] = {
       class_type: "SaveImage",
-      inputs: { filename_prefix: "ChromaInpaint", images: ["26", 0] },
+      inputs: { filename_prefix: `${julianDayNumber()}_inpaint`, images: ["26", 0] },
       _meta: { title: "Save Image (Result)" },
     };
   }
@@ -473,7 +478,7 @@ export function buildUpscaleWorkflow({
     },
     "740": {
       class_type: "SaveImage",
-      inputs: { filename_prefix: "ChromaUpscale", images: ["2", 0] },
+      inputs: { filename_prefix: `${julianDayNumber()}_upscaled`, images: ["2", 0] },
       _meta: { title: "Save Image" },
     },
     // === Shared model loaders (unified IDs for VRAM cache) ===

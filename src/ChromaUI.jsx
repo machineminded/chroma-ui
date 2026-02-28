@@ -34,6 +34,7 @@ export default function ChromaUI() {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusMsg, setStatusMsg] = useState("Ready");
+  const [currentImageFilename, setCurrentImageFilename] = useState(null);
   const [generatedImages, setGeneratedImages] = useState([]);
   const [currentImage, setCurrentImage] = useState(null);
 
@@ -68,6 +69,9 @@ export default function ChromaUI() {
   const [upscaleTileWidth, setUpscaleTileWidth] = useState(DEFAULTS.upscaleTileWidth);
   const [upscaleTileHeight, setUpscaleTileHeight] = useState(DEFAULTS.upscaleTileHeight);
   const [upscaleDenoise, setUpscaleDenoise] = useState(DEFAULTS.upscaleDenoise);
+
+  // ---- Styles ----
+  const [selectedStyle, setSelectedStyle] = useState(null);
 
   // ---- Panel ----
   const [activeTab, setActiveTab] = useState("Config");
@@ -262,6 +266,10 @@ export default function ChromaUI() {
     setProgress(0);
     setStatusMsg("Queueing prompt...");
 
+    const effectivePositive = selectedStyle
+      ? `${positive}, ${selectedStyle.prompt}`
+      : positive;
+
     try {
       const actualSeed = seed === -1 ? Math.floor(Math.random() * 2 ** 32) : seed;
       let workflow;
@@ -277,7 +285,7 @@ export default function ChromaUI() {
 
         setStatusMsg("Upscaling...");
         workflow = api.buildUpscaleWorkflow({
-          imageName, positive, negative,
+          imageName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg, shift,
           denoise: upscaleDenoise,
           unetName, clipName, vaeName,
@@ -296,7 +304,7 @@ export default function ChromaUI() {
 
         setStatusMsg("Generating inpaint...");
         workflow = api.buildInpaintWorkflow({
-          imageName, maskName, positive, negative,
+          imageName, maskName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg,
           denoise: inpaintDenoise,
           shift: DEFAULTS.inpaintShift,
@@ -313,7 +321,7 @@ export default function ChromaUI() {
         if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
         setStatusMsg("Generating...");
         workflow = api.buildTxt2ImgWorkflow({
-          positive, negative,
+          positive: effectivePositive, negative,
           width: effectiveSize.w, height: effectiveSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
@@ -344,8 +352,9 @@ export default function ChromaUI() {
           setCanvasSize({ w: canvasSize.w * upscaleBy, h: canvasSize.h * upscaleBy });
         }
         setCurrentImage(imageUrl);
+        setCurrentImageFilename(img.filename);
         setGeneratedImages((prev) => [
-          { url: imageUrl, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
+          { url: imageUrl, filename: img.filename, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
           ...prev,
         ]);
         setStatusMsg(genType === "upscale" ? `Upscaled ${upscaleBy}×!` : "Done!");
@@ -358,7 +367,7 @@ export default function ChromaUI() {
     }
     setGenerating(false);
   }, [
-    connected, positive, negative, seed, steps, cfg, shift, hasMask, currentImage,
+    connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
     activeTool, serverUrl, canvasSize, unetName, clipName, vaeName,
     lora1, lora1Strength, lora2, lora2Strength,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
@@ -386,7 +395,8 @@ export default function ChromaUI() {
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <Canvas
-            canvasSize={canvasSize} currentImage={currentImage} activeTool={activeTool}
+            canvasSize={canvasSize} currentImage={currentImage} currentImageFilename={currentImageFilename}
+            activeTool={activeTool}
             generating={generating} progress={progress} statusMsg={statusMsg}
             zoom={zoom} setZoom={setZoom} panOffset={panOffset} setPanOffset={setPanOffset}
             maskCanvasRef={maskCanvasRef} hasMask={hasMask} setHasMask={setHasMask}
@@ -405,11 +415,13 @@ export default function ChromaUI() {
             negative={negative} setNegative={setNegative}
             onGenerate={handleGenerate} generating={generating}
             hasMask={hasMask} activeTool={activeTool}
+            selectedStyle={selectedStyle}
           />
         </div>
 
         <ConfigPanel
           activeTab={activeTab} setActiveTab={setActiveTab}
+          selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle}
           serverUrl={serverUrl} setServerUrl={setServerUrl}
           connected={connected} checking={checking} onCheckConnection={checkConnection}
           unetName={unetName} setUnetName={setUnetName}
@@ -426,7 +438,8 @@ export default function ChromaUI() {
           betaAlpha={betaAlpha} setBetaAlpha={setBetaAlpha}
           betaBeta={betaBeta} setBetaBeta={setBetaBeta}
           seed={seed} setSeed={setSeed}
-          generatedImages={generatedImages} currentImage={currentImage} setCurrentImage={setCurrentImage}
+          generatedImages={generatedImages} currentImage={currentImage}
+          setCurrentImage={(url, filename) => { setCurrentImage(url); setCurrentImageFilename(filename ?? null); }}
           contextImageUrl={contextImageUrl}
         />
       </div>
