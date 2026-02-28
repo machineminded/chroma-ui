@@ -1,0 +1,226 @@
+{
+  "styles": {
+    "photography": {
+      "film": [
+        {
+          "name": "Golden Hour Beach",
+          "prompt": "Kodak Portra 400, golden hour, warm amber tones, ocean bokeh background, halation glow, shallow depth of field, analog film aesthetic"
+        },
+        {
+          "name": "Moody Black & White",
+          "prompt": "Ilford HP5 Plus pushed to 1600, high contrast, deep crushed blacks, heavy grain, noir cinematic feel"
+        },
+        {
+          "name": "Soft Boudoir",
+          "prompt": "Kodak Portra 800, large window soft diffused light, slightly overexposed, warm ivory tones, fine grain, shallow depth of field, dreamy editorial feel"
+        },
+        {
+          "name": "Vintage 70s",
+          "prompt": "Kodak Ektachrome E100, cross-processed, boosted saturation, teal shadows, orange highlights, coarse grain"
+        },
+        {
+          "name": "Bright & Airy",
+          "prompt": "Fujifilm Pro 400H, soft overcast natural light, pastel warm tones, lifted shadows, fine grain, lifestyle editorial"
+        },
+        {
+          "name": "Grainy Noir",
+          "prompt": "Kodak Tri-X 400 pushed to 3200, single practical light source, deep shadows, high contrast, heavy grain, black and white"
+        },
+        {
+          "name": "Polaroid",
+          "prompt": "Polaroid 600, slightly faded and overexposed, warm color shift, soft focus, white border, light leak, muted pastel tones"
+        },
+        {
+          "name": "Bleach Bypass",
+          "prompt": "35mm bleach bypass process, desaturated high contrast, retained silver, harsh directional light, gritty cinematic feel"
+        },
+        {
+          "name": "Cross Processed",
+          "prompt": "35mm cross processed slide film, boosted saturation, shifted color channels, teal shadows, orange highlights, high contrast"
+        }
+      ],
+      "digital": [
+        {
+          "name": "Modern Editorial",
+          "prompt": "Sony A7R IV, 85mm f/1.4, natural window light, crisp sharp detail, shallow depth of field, neutral color grading, clean professional feel"
+        },
+        {
+          "name": "iPhone Selfie",
+          "prompt": "iPhone front camera aesthetic, slightly wide angle distortion, digital noise in shadows, slight HDR overexposure, muted warm color grading, casual candid feel"
+        },
+        {
+          "name": "iPhone Night Mode",
+          "prompt": "iPhone Night Mode, boosted shadows, slight color noise, warm lamp light bleeding, casual late night feel"
+        }
+      ],
+      "product": [
+        {
+          "name": "Clean Studio",
+          "prompt": "Sony A7R IV, 100mm macro lens, large overhead softbox, subtle surface reflection, thin drop shadow, clean white background, commercial retail product photography"
+        },
+        {
+          "name": "Dark & Dramatic",
+          "prompt": "deep black background, single focused side light, dramatic specular highlight on edges, subtle surface reflection, cinematic commercial product photography"
+        }
+      ],
+      "special_technique": [
+        {
+          "name": "Anamorphic",
+          "prompt": "anamorphic lens, horizontal lens flare streaks, shallow depth of field, cinematic widescreen crop"
+        },
+        {
+          "name": "Rembrandt",
+          "prompt": "Rembrandt lighting, single studio light, triangular highlight on shadowed cheek, deep blacks, Hasselblad, Kodak Portra 400"
+        },
+        {
+          "name": "Wet Plate Collodion",
+          "prompt": "wet plate collodion photograph, 1800s portrait, vignetted edges, uneven chemical streaking, sepia silver tones, long exposure motion softness"
+        },
+        {
+          "name": "Fisheye Party",
+          "prompt": "35mm fisheye lens, Kodak Ultramax 400, strong barrel distortion, warm practical lighting, motion blurred background, candid snapshot feel"
+        },
+        {
+          "name": "Fisheye Rave",
+          "prompt": "35mm fisheye lens, Kodak Tri-X 400 pushed to 3200, heavy grain, colored strobe lighting, motion blur, high contrast"
+        },
+        {
+          "name": "Tilt-Shift",
+          "prompt": "tilt-shift lens, miniature effect, selective focus plane, soft edges, bright natural light, commercial editorial feel"
+        }
+      ],
+      "studio": [
+        {
+          "name": "80s Fashion",
+          "prompt": "Hasselblad 500CM, Kodak Ektachrome 100, smoke machine haze, dramatic side lighting, magenta and teal gel backdrop, rich saturated colors, high fashion editorial"
+        },
+        {
+          "name": "90s Editorial",
+          "prompt": "Kodak Ektachrome 100, saturated punchy colors, hard studio strobe, clean white backdrop, strong graphic composition, Harper's Bazaar inspired"
+        },
+        {
+          "name": "High Fashion",
+          "prompt": "Hasselblad 500CM, 80mm f/2.8, Kodak Portra 400, large softbox side lighting, clean minimal studio backdrop, Vogue editorial aesthetic"
+        }
+      ]
+    },
+    "cartoon": {
+      "retro": [
+        {
+          "name": "90s Nickelodeon",
+          "prompt": "90s Nickelodeon cartoon style, thick uneven black outlines, flat bold colors, exaggerated rubberhose proportions, hand-drawn cel animation aesthetic, mustard yellow and slime green palette, Klasky Csupo inspired"
+        },
+        {
+          "name": "80s Saturday Morning",
+          "prompt": "1980s Saturday morning cartoon style, clean bold outlines, flat cel shading, bright primary colors, retro animation aesthetic"
+        },
+        {
+          "name": "Vintage Disney",
+          "prompt": "1940s vintage Disney animation style, fluid rubberhose animation, soft watercolor backgrounds, warm limited palette, classic cel animation"
+        }
+      ],
+      "modern": [
+        {
+          "name": "Adventure Time",
+          "prompt": "Adventure Time cartoon style, simple rounded shapes, flat bold colors, thick outlines, expressive minimal faces, pastel background tones"
+        },
+        {
+          "name": "Studio Ghibli",
+          "prompt": "Studio Ghibli anime style, soft watercolor tones, detailed backgrounds, warm natural light, hand-drawn cel animation aesthetic"
+        }
+      ]
+    },
+    "illustration": {
+      "print": [
+        {
+          "name": "Risograph",
+          "prompt": "risograph print aesthetic, limited two or three color palette, slight misregistration, halftone texture, flat graphic shapes, indie zine feel"
+        },
+        {
+          "name": "Screen Print",
+          "prompt": "screen print aesthetic, bold flat colors, slight ink texture, limited palette, graphic poster feel"
+        },
+        {
+          "name": "Vintage Poster",
+          "prompt": "vintage travel poster style, bold flat colors, art deco typography influence, clean graphic shapes, retro commercial illustration"
+        },
+        {
+          "name": "Woodblock Print",
+          "prompt": "Japanese woodblock print style, bold outlines, flat color fills, visible wood grain texture, ukiyo-e inspired"
+        }
+      ],
+      "digital": [
+        {
+          "name": "Concept Art",
+          "prompt": "professional concept art, detailed environment painting, cinematic lighting, matte painting aesthetic, game or film production art style"
+        },
+        {
+          "name": "Lo-Fi Illustration",
+          "prompt": "lo-fi digital illustration, soft muted colors, simple flat shapes, cozy warm tones, indie game art aesthetic"
+        },
+        {
+          "name": "Vaporwave",
+          "prompt": "vaporwave aesthetic, neon pink and cyan palette, retro 80s computer graphics, grid lines, glitch texture, surreal digital art"
+        }
+      ]
+    },
+    "fine_art": [
+      {
+        "name": "Oil Painting",
+        "prompt": "oil painting, visible brushwork, rich deep colors, classical lighting, canvas texture, Old Masters inspired"
+      },
+      {
+        "name": "Watercolor",
+        "prompt": "watercolor painting, soft wet edges, transparent washes, white paper showing through, loose expressive brushwork"
+      },
+      {
+        "name": "Charcoal Sketch",
+        "prompt": "charcoal sketch, rough textured strokes, smudged shading, high contrast, paper grain visible, expressive gestural marks"
+      },
+      {
+        "name": "Art Nouveau",
+        "prompt": "Art Nouveau illustration style, flowing organic lines, decorative floral motifs, muted jewel tones, flat graphic aesthetic, Alphonse Mucha inspired"
+      },
+      {
+        "name": "Art Deco",
+        "prompt": "Art Deco style, bold geometric shapes, gold and black palette, symmetrical composition, sleek streamlined aesthetic, 1920s luxury feel"
+      }
+    ],
+    "cinema": [
+      {
+        "name": "Film Noir",
+        "prompt": "film noir cinematic style, black and white, hard dramatic shadows, venetian blind light patterns, high contrast, 1940s atmosphere"
+      },
+      {
+        "name": "Wes Anderson",
+        "prompt": "Wes Anderson film aesthetic, perfectly symmetrical composition, pastel color palette, flat graphic staging, deadpan quirky feel"
+      },
+      {
+        "name": "Cyberpunk",
+        "prompt": "cyberpunk cinematic aesthetic, neon lights reflecting on wet streets, dark moody atmosphere, teal and magenta color grade, futuristic urban setting"
+      },
+      {
+        "name": "Sci-Fi Laboratory",
+        "prompt": "dimly lit sci-fi laboratory, Sony A7R IV, 24mm f/1.8, glowing monitors, cable bundles, luminescent fluid in clear hoses, cold blue and green ambient light, atmospheric haze, cinematic color grading"
+      }
+    ],
+    "game": [
+      {
+        "name": "Pixel Art",
+        "prompt": "pixel art style, 16-bit SNES era, limited color palette, crisp pixel edges, retro game aesthetic"
+      },
+      {
+        "name": "PS1 Low Poly",
+        "prompt": "PS1 era 3D graphics, low polygon count, texture warping, dithered shadows, retro early 3D game aesthetic"
+      },
+      {
+        "name": "8-Bit",
+        "prompt": "8-bit NES pixel art style, extremely limited palette, chunky pixels, retro arcade game aesthetic"
+      },
+      {
+        "name": "Unreal Engine",
+        "prompt": "Unreal Engine 5 render, photorealistic lighting, ray traced reflections, hyper detailed textures, cinematic depth of field, game engine aesthetic"
+      }
+    ]
+  }
+}

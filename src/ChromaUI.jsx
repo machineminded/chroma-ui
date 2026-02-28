@@ -70,6 +70,9 @@ export default function ChromaUI() {
   const [upscaleTileHeight, setUpscaleTileHeight] = useState(DEFAULTS.upscaleTileHeight);
   const [upscaleDenoise, setUpscaleDenoise] = useState(DEFAULTS.upscaleDenoise);
 
+  // ---- Styles ----
+  const [selectedStyle, setSelectedStyle] = useState(null);
+
   // ---- Panel ----
   const [activeTab, setActiveTab] = useState("Config");
 
@@ -263,6 +266,10 @@ export default function ChromaUI() {
     setProgress(0);
     setStatusMsg("Queueing prompt...");
 
+    const effectivePositive = selectedStyle
+      ? `${positive}, ${selectedStyle.prompt}`
+      : positive;
+
     try {
       const actualSeed = seed === -1 ? Math.floor(Math.random() * 2 ** 32) : seed;
       let workflow;
@@ -278,7 +285,7 @@ export default function ChromaUI() {
 
         setStatusMsg("Upscaling...");
         workflow = api.buildUpscaleWorkflow({
-          imageName, positive, negative,
+          imageName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg, shift,
           denoise: upscaleDenoise,
           unetName, clipName, vaeName,
@@ -297,7 +304,7 @@ export default function ChromaUI() {
 
         setStatusMsg("Generating inpaint...");
         workflow = api.buildInpaintWorkflow({
-          imageName, maskName, positive, negative,
+          imageName, maskName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg,
           denoise: inpaintDenoise,
           shift: DEFAULTS.inpaintShift,
@@ -314,7 +321,7 @@ export default function ChromaUI() {
         if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
         setStatusMsg("Generating...");
         workflow = api.buildTxt2ImgWorkflow({
-          positive, negative,
+          positive: effectivePositive, negative,
           width: effectiveSize.w, height: effectiveSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
@@ -360,7 +367,7 @@ export default function ChromaUI() {
     }
     setGenerating(false);
   }, [
-    connected, positive, negative, seed, steps, cfg, shift, hasMask, currentImage,
+    connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
     activeTool, serverUrl, canvasSize, unetName, clipName, vaeName,
     lora1, lora1Strength, lora2, lora2Strength,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
@@ -408,11 +415,13 @@ export default function ChromaUI() {
             negative={negative} setNegative={setNegative}
             onGenerate={handleGenerate} generating={generating}
             hasMask={hasMask} activeTool={activeTool}
+            selectedStyle={selectedStyle}
           />
         </div>
 
         <ConfigPanel
           activeTab={activeTab} setActiveTab={setActiveTab}
+          selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle}
           serverUrl={serverUrl} setServerUrl={setServerUrl}
           connected={connected} checking={checking} onCheckConnection={checkConnection}
           unetName={unetName} setUnetName={setUnetName}

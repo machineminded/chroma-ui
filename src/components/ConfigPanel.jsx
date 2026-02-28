@@ -1,6 +1,7 @@
 import Icons from "./Icons";
 import { COLORS, labelStyle, inputStyle, sliderStyle, valStyle, dividerStyle, sectionHeaderStyle, selectStyle } from "../styles";
 import { CANVAS_SIZES } from "../constants";
+import StylesPanel from "./StylesPanel";
 
 export default function ConfigPanel({
   // Tab state
@@ -17,6 +18,8 @@ export default function ConfigPanel({
   canvasSize, setCanvasSize, steps, setSteps, cfg, setCfg,
   shift, setShift, betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
   seed, setSeed,
+  // Styles
+  selectedStyle, setSelectedStyle,
   // History
   generatedImages, currentImage, setCurrentImage,
   // Inpaint context preview
@@ -40,7 +43,7 @@ export default function ConfigPanel({
       <div style={{ display: "flex", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bgDarker }}>
         {[
           { icon: Icons.Settings, label: "Config" },
-          { icon: Icons.Layers, label: "Layers" },
+          { icon: Icons.Styles, label: "Styles" },
           { icon: Icons.History, label: "History" },
         ].map((tab) => (
           <button
@@ -80,10 +83,8 @@ export default function ConfigPanel({
           />
         )}
 
-        {activeTab === "Layers" && (
-          <div style={{ color: COLORS.textDimmest, fontSize: 11, textAlign: "center", padding: 20 }}>
-            Layers panel coming soon.
-          </div>
+        {activeTab === "Styles" && (
+          <StylesPanel selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle} />
         )}
 
         {activeTab === "History" && (
