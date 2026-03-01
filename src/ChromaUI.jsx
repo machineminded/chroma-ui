@@ -316,8 +316,7 @@ export default function ChromaUI() {
         // ---- INPAINT ----
         isInpaint = true;
         genType = "inpaint";
-        const effectiveSize = preUpscaleCanvasSize.current ?? canvasSize;
-        if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
+        preUpscaleCanvasSize.current = null; // clear ref without restoring canvas size
         setStatusMsg("Uploading image + mask...");
         const { imageName, maskName } = await uploadCanvasAndMask();
 
@@ -330,8 +329,8 @@ export default function ChromaUI() {
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
           contextExtendFactor: inpaintContextExtend,
-          outputWidth: effectiveSize.w,
-          outputHeight: effectiveSize.h,
+          outputWidth: canvasSize.w,
+          outputHeight: canvasSize.h,
           contextOnly: false,
         });
       } else {
