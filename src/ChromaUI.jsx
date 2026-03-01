@@ -66,6 +66,7 @@ export default function ChromaUI() {
   const [brushSize, setBrushSize] = useState(DEFAULTS.brushSize);
   const [contextImageUrl, setContextImageUrl] = useState(null);
   const maskCanvasRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   // ---- Upscale ----
   const [upscaleBy, setUpscaleBy] = useState(DEFAULTS.upscaleBy);
@@ -226,6 +227,14 @@ export default function ChromaUI() {
       unetName, clipName, vaeName, lora1, lora1Strength, lora2, lora2Strength]);
 
   // ===========================================================================
+  // Cancel generation
+  // ===========================================================================
+  const handleCancel = useCallback(() => {
+    abortControllerRef.current?.abort();
+    api.interruptExecution(serverUrl);
+  }, [serverUrl]);
+
+  // ===========================================================================
   // Clear mask
   // ===========================================================================
   const handleClearMask = useCallback(() => {
@@ -271,6 +280,7 @@ export default function ChromaUI() {
     const isUpscale = activeTool === "upscale";
     if (isUpscale && !currentImage) { setStatusMsg("Generate an image first before upscaling"); return; }
 
+    abortControllerRef.current = new AbortController();
     setGenerating(true);
     setProgress(0);
     setStatusMsg("Queueing prompt...");
@@ -341,7 +351,7 @@ export default function ChromaUI() {
 
       const { prompt_id } = await api.queuePrompt(serverUrl, workflow);
       const outputs = await api.pollForCompletion(serverUrl, prompt_id, {
-        steps, onProgress: setProgress,
+        steps, onProgress: setProgress, signal: abortControllerRef.current.signal,
       });
 
       console.log("[Chroma] Generation outputs:", JSON.stringify(Object.keys(outputs)));
@@ -377,7 +387,11 @@ export default function ChromaUI() {
         setStatusMsg("No output image found");
       }
     } catch (err) {
-      setStatusMsg(`Error: ${err.message}`);
+      if (err.name === "AbortError") {
+        setStatusMsg("Cancelled");
+      } else {
+        setStatusMsg(`Error: ${err.message}`);
+      }
     }
     setGenerating(false);
   }, [
@@ -419,6 +433,7 @@ export default function ChromaUI() {
             inpaintContextExtend={inpaintContextExtend} setInpaintContextExtend={setInpaintContextExtend}
             brushSize={brushSize} setBrushSize={setBrushSize}
             onClearMask={handleClearMask}
+            onCancel={handleCancel}
             upscaleBy={upscaleBy} setUpscaleBy={setUpscaleBy}
             upscaleTileWidth={upscaleTileWidth} setUpscaleTileWidth={setUpscaleTileWidth}
             upscaleTileHeight={upscaleTileHeight} setUpscaleTileHeight={setUpscaleTileHeight}

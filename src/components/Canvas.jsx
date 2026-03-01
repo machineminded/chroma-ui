@@ -46,6 +46,7 @@ export default function Canvas({
   brushSize,
   setBrushSize,
   onClearMask,
+  onCancel,
   // Upscale
   upscaleBy,
   setUpscaleBy,
@@ -451,6 +452,17 @@ export default function Canvas({
               }} />
             </div>
             <span style={{ fontSize: 11, color: COLORS.accent }}>{statusMsg}</span>
+            <button
+              onClick={onCancel}
+              style={{
+                marginTop: 4, padding: "5px 18px",
+                background: "transparent", border: `1px solid ${COLORS.danger}`,
+                borderRadius: 5, color: COLORS.danger, cursor: "pointer",
+                fontSize: 11, fontFamily: "inherit", letterSpacing: 0.5,
+              }}
+            >
+              Cancel
+            </button>
           </div>
         )}
       </div>

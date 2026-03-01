@@ -77,28 +77,54 @@ export async function uploadMask(serverUrl, blob, originalFilename, maskFilename
 }
 
 /**
+ * Interrupt the currently running ComfyUI workflow.
+ */
+export async function interruptExecution(serverUrl) {
+  try {
+    await fetch(`${serverUrl}/interrupt`, { method: "POST" });
+  } catch {
+    // Best-effort — ignore network errors
+  }
+}
+
+/**
  * Poll /history/{promptId} until outputs appear.
  * Calls onProgress(0-100) during polling and returns the outputs object.
+ * Pass an AbortSignal via `signal` to cancel polling (e.g. when the user
+ * clicks Cancel). Also detects execution_interrupted from ComfyUI itself
+ * so external cancellations (via ComfyUI's own UI) recover cleanly.
  */
-export async function pollForCompletion(serverUrl, promptId, { steps = 8, maxAttempts = 300, onProgress } = {}) {
+export async function pollForCompletion(serverUrl, promptId, { steps = 8, maxAttempts = 300, onProgress, signal } = {}) {
   let attempts = 0;
   while (attempts < maxAttempts) {
+    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+
     await new Promise((r) => setTimeout(r, 1000));
     attempts++;
     onProgress?.(Math.min(95, (attempts / (steps * 1.2)) * 100));
+
+    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
 
     try {
       const history = await getHistory(serverUrl, promptId);
       const entry = history[promptId];
       if (entry) {
-        // Check for execution errors
-        if (entry.status?.status_str === "error" || entry.status?.completed === false) {
-          const errMsg = entry.status?.messages?.find(m => m[0] === "execution_error");
+        const messages = entry.status?.messages ?? [];
+
+        // Detect external cancellation (interrupted from ComfyUI or by our interrupt call)
+        if (messages.some((m) => m[0] === "execution_interrupted")) {
+          throw new DOMException("Cancelled", "AbortError");
+        }
+
+        // Detect execution errors
+        if (entry.status?.status_str === "error") {
+          const errMsg = messages.find((m) => m[0] === "execution_error");
           if (errMsg) {
             console.error("[Chroma] Execution error:", JSON.stringify(errMsg[1]));
             throw new Error(`ComfyUI execution error on node ${errMsg[1]?.node_id}: ${errMsg[1]?.exception_type} — ${errMsg[1]?.exception_message}`);
           }
         }
+
         if (entry.outputs && Object.keys(entry.outputs).length > 0) {
           onProgress?.(100);
           console.log("[Chroma] Poll complete. Output nodes:", Object.keys(entry.outputs));
@@ -106,8 +132,8 @@ export async function pollForCompletion(serverUrl, promptId, { steps = 8, maxAtt
         }
       }
     } catch (e) {
-      if (e.message.includes("ComfyUI execution error")) throw e;
-      // Keep polling for other errors (network blips)
+      if (e.name === "AbortError" || e.message?.includes("ComfyUI execution error")) throw e;
+      // Keep polling through transient network blips
     }
   }
   throw new Error("Generation timed out");
