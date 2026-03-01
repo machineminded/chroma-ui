@@ -14,6 +14,8 @@ export default function ConfigPanel({
   lora1, setLora1, lora1Strength, setLora1Strength,
   lora2, setLora2, lora2Strength, setLora2Strength,
   availableLoras,
+  // Model lists
+  availableUnets, availableClips, availableVaes,
   // Sampling
   canvasSize, setCanvasSize, steps, setSteps, cfg, setCfg,
   shift, setShift, betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
@@ -74,6 +76,7 @@ export default function ConfigPanel({
             lora1={lora1} setLora1={setLora1} lora1Strength={lora1Strength} setLora1Strength={setLora1Strength}
             lora2={lora2} setLora2={setLora2} lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
             availableLoras={availableLoras}
+            availableUnets={availableUnets} availableClips={availableClips} availableVaes={availableVaes}
             canvasSize={canvasSize} setCanvasSize={setCanvasSize}
             steps={steps} setSteps={setSteps} cfg={cfg} setCfg={setCfg}
             shift={shift} setShift={setShift}
@@ -106,7 +109,7 @@ function ConfigTab({
   unetName, setUnetName, clipName, setClipName, vaeName, setVaeName,
   lora1, setLora1, lora1Strength, setLora1Strength,
   lora2, setLora2, lora2Strength, setLora2Strength,
-  availableLoras,
+  availableLoras, availableUnets, availableClips, availableVaes,
   canvasSize, setCanvasSize,
   steps, setSteps, cfg, setCfg, shift, setShift,
   betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
@@ -135,18 +138,9 @@ function ConfigTab({
 
       {/* Model */}
       <div style={sectionHeaderStyle}>Model</div>
-      <div>
-        <label style={labelStyle}>UNET / Diffusion Model</label>
-        <input value={unetName} onChange={(e) => setUnetName(e.target.value)} style={{ ...inputStyle, width: "100%", marginTop: 4 }} />
-      </div>
-      <div>
-        <label style={labelStyle}>CLIP (T5)</label>
-        <input value={clipName} onChange={(e) => setClipName(e.target.value)} style={{ ...inputStyle, width: "100%", marginTop: 4 }} />
-      </div>
-      <div>
-        <label style={labelStyle}>VAE</label>
-        <input value={vaeName} onChange={(e) => setVaeName(e.target.value)} style={{ ...inputStyle, width: "100%", marginTop: 4 }} />
-      </div>
+      <ModelSelect label="UNET / Diffusion Model" value={unetName} onChange={setUnetName} models={availableUnets} />
+      <ModelSelect label="CLIP (T5)" value={clipName} onChange={setClipName} models={availableClips} />
+      <ModelSelect label="VAE" value={vaeName} onChange={setVaeName} models={availableVaes} />
 
       <div style={dividerStyle} />
 
@@ -287,6 +281,28 @@ function SliderRow({ label, value, onChange, min, max, step, decimals = 0 }) {
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))} style={sliderStyle} />
+    </div>
+  );
+}
+
+// ---------- Reusable model selector ----------
+function ModelSelect({ label, value, onChange, models }) {
+  if (models.length === 0) {
+    return (
+      <div>
+        <label style={labelStyle}>{label}</label>
+        <input value={value} onChange={(e) => onChange(e.target.value)}
+          style={{ ...inputStyle, width: "100%", marginTop: 4 }} />
+      </div>
+    );
+  }
+  const options = models.includes(value) ? models : [value, ...models];
+  return (
+    <div>
+      <label style={labelStyle}>{label}</label>
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+        {options.map((m) => <option key={m} value={m}>{m.replace(/\.[^.]+$/, "")}</option>)}
+      </select>
     </div>
   );
 }

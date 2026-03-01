@@ -21,11 +21,11 @@ export default function PromptBar({ positive, setPositive, negative, setNegative
           value={positive}
           onChange={(e) => setPositive(e.target.value)}
           placeholder="Describe your image... (positive prompt)"
-          rows={3}
+          rows={6}
           style={{
             flex: 1, background: COLORS.bgDarker, border: `1px solid ${COLORS.border}`, borderRadius: 6,
             color: "#ddd", padding: "8px 10px", fontSize: 12, fontFamily: "inherit",
-            resize: "vertical", outline: "none", minHeight: 56,
+            resize: "vertical", outline: "none", minHeight: 112,
           }}
           onFocus={(e) => (e.target.style.borderColor = "#a78bfa55")}
           onBlur={(e) => (e.target.style.borderColor = COLORS.border)}

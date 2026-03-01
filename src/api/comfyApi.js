@@ -420,6 +420,27 @@ export function buildInpaintWorkflow({
 }
 
 /**
+ * Fetch available UNET, CLIP, and VAE model lists from ComfyUI.
+ */
+export async function fetchModels(serverUrl) {
+  async function getList(node, field) {
+    try {
+      const res = await fetch(`${serverUrl}/object_info/${node}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const list = data?.[node]?.input?.required?.[field]?.[0];
+      return Array.isArray(list) ? list : [];
+    } catch { return []; }
+  }
+  const [unets, clips, vaes] = await Promise.all([
+    getList("UNETLoader", "unet_name"),
+    getList("CLIPLoader", "clip_name"),
+    getList("VAELoader", "vae_name"),
+  ]);
+  return { unets, clips, vaes };
+}
+
+/**
  * Fetch available upscale models from ComfyUI.
  */
 export async function fetchUpscaleModels(serverUrl) {

@@ -55,6 +55,9 @@ export default function ChromaUI() {
   const [lora2, setLora2] = useState("(none)");
   const [lora2Strength, setLora2Strength] = useState(1.0);
   const [availableLoras, setAvailableLoras] = useState([]);
+  const [availableUnets, setAvailableUnets] = useState([]);
+  const [availableClips, setAvailableClips] = useState([]);
+  const [availableVaes, setAvailableVaes] = useState([]);
 
   // ---- Inpaint ----
   const [hasMask, setHasMask] = useState(false);
@@ -85,8 +88,14 @@ export default function ChromaUI() {
       const res = await fetch(`${serverUrl}/system_stats`);
       if (res.ok) {
         setConnected(true);
-        const loras = await api.fetchLoras(serverUrl);
+        const [loras, models] = await Promise.all([
+          api.fetchLoras(serverUrl),
+          api.fetchModels(serverUrl),
+        ]);
         setAvailableLoras(loras);
+        setAvailableUnets(models.unets);
+        setAvailableClips(models.clips);
+        setAvailableVaes(models.vaes);
         setStatusMsg(loras.length > 0
           ? `Connected — ${loras.length} LoRA${loras.length !== 1 ? "s" : ""} found`
           : "Connected to ComfyUI"
@@ -432,6 +441,9 @@ export default function ChromaUI() {
           lora2={lora2} setLora2={setLora2}
           lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
           availableLoras={availableLoras}
+          availableUnets={availableUnets}
+          availableClips={availableClips}
+          availableVaes={availableVaes}
           canvasSize={canvasSize} setCanvasSize={setCanvasSize}
           steps={steps} setSteps={setSteps} cfg={cfg} setCfg={setCfg}
           shift={shift} setShift={setShift}
