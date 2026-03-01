@@ -359,15 +359,20 @@ export default function ChromaUI() {
         const imageUrl = api.getImageUrl(serverUrl, img.filename, img.subfolder, img.type);
         if (isUpscale) {
           setCanvasSize({ w: canvasSize.w * upscaleBy, h: canvasSize.h * upscaleBy });
+          setCurrentImage(imageUrl);
+          setCurrentImageFilename(img.filename);
+        } else if (!isInpaint) {
+          setCurrentImage(imageUrl);
+          setCurrentImageFilename(img.filename);
         }
-        setCurrentImage(imageUrl);
-        setCurrentImageFilename(img.filename);
+        // Inpaint: result goes to history only — canvas image and mask are preserved
+        // so the user can re-run until satisfied, then pick a result from History.
         setGeneratedImages((prev) => [
           { url: imageUrl, filename: img.filename, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
           ...prev,
         ]);
+        if (isInpaint) setActiveTab("History");
         setStatusMsg(genType === "upscale" ? `Upscaled ${upscaleBy}×!` : "Done!");
-        if (isInpaint) handleClearMask();
       } else {
         setStatusMsg("No output image found");
       }
@@ -381,7 +386,7 @@ export default function ChromaUI() {
     lora1, lora1Strength, lora2, lora2Strength,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
     upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
-    uploadCanvasAndMask, uploadCurrentImage, handleClearMask,
+    uploadCanvasAndMask, uploadCurrentImage,
   ]);
 
   // ===========================================================================
