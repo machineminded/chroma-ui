@@ -2,6 +2,13 @@ import { COLORS } from "../styles";
 
 export default function PromptBar({ positive, setPositive, negative, setNegative, onGenerate, generating, hasMask, activeTool, selectedStyle }) {
   const buttonLabel = generating ? "..." : activeTool === "upscale" ? "Upscale" : hasMask ? "Inpaint" : "Generate";
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter" && e.ctrlKey) {
+      e.preventDefault();
+      if (!generating && positive.trim()) onGenerate();
+    }
+  }
   return (
     <div
       style={{
@@ -29,6 +36,7 @@ export default function PromptBar({ positive, setPositive, negative, setNegative
           }}
           onFocus={(e) => (e.target.style.borderColor = "#a78bfa55")}
           onBlur={(e) => (e.target.style.borderColor = COLORS.border)}
+          onKeyDown={handleKeyDown}
         />
         <button
           onClick={onGenerate}
@@ -75,6 +83,7 @@ export default function PromptBar({ positive, setPositive, negative, setNegative
           }}
           onFocus={(e) => (e.target.style.borderColor = "#ef444455")}
           onBlur={(e) => (e.target.style.borderColor = COLORS.border)}
+          onKeyDown={handleKeyDown}
         />
       </div>
     </div>
