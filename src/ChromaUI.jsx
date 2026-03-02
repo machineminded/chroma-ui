@@ -26,7 +26,6 @@ export default function ChromaUI() {
 
   // ---- Canvas ----
   const [canvasSize, setCanvasSize] = useState(CANVAS_SIZES[DEFAULT_CANVAS_INDEX]);
-  const preUpscaleCanvasSize = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
@@ -113,6 +112,24 @@ export default function ChromaUI() {
   }, [serverUrl]);
 
   useEffect(() => { checkConnection(); }, []);
+
+  // ===========================================================================
+  // Canvas size — derived from the loaded image
+  // Whenever currentImage changes, read its actual pixel dimensions and sync
+  // canvasSize so that the canvas always matches the image being displayed.
+  // ===========================================================================
+  useEffect(() => {
+    if (!currentImage) return;
+    const img = new window.Image();
+    img.onload = () => {
+      setCanvasSize(prev =>
+        prev.w === img.naturalWidth && prev.h === img.naturalHeight
+          ? prev
+          : { w: img.naturalWidth, h: img.naturalHeight }
+      );
+    };
+    img.src = currentImage;
+  }, [currentImage]);
 
   // ===========================================================================
   // Keyboard shortcuts
@@ -298,7 +315,6 @@ export default function ChromaUI() {
       if (isUpscale) {
         // ---- UPSCALE ----
         genType = "upscale";
-        preUpscaleCanvasSize.current = canvasSize;
         setStatusMsg("Uploading image for upscale...");
         const imageName = await uploadCurrentImage();
 
@@ -316,7 +332,6 @@ export default function ChromaUI() {
         // ---- INPAINT ----
         isInpaint = true;
         genType = "inpaint";
-        preUpscaleCanvasSize.current = null; // clear ref without restoring canvas size
         setStatusMsg("Uploading image + mask...");
         const { imageName, maskName } = await uploadCanvasAndMask();
 
@@ -335,12 +350,10 @@ export default function ChromaUI() {
         });
       } else {
         // ---- TXT2IMG ----
-        const effectiveSize = preUpscaleCanvasSize.current ?? canvasSize;
-        if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
         setStatusMsg("Generating...");
         workflow = api.buildTxt2ImgWorkflow({
           positive: effectivePositive, negative,
-          width: effectiveSize.w, height: effectiveSize.h,
+          width: canvasSize.w, height: canvasSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
@@ -367,8 +380,7 @@ export default function ChromaUI() {
       if (img) {
         const imageUrl = api.getImageUrl(serverUrl, img.filename, img.subfolder, img.type);
         if (isUpscale) {
-          setCanvasSize({ w: canvasSize.w * upscaleBy, h: canvasSize.h * upscaleBy });
-          setCurrentImage(imageUrl);
+          setCurrentImage(imageUrl); // canvasSize will be synced by the currentImage useEffect
           setCurrentImageFilename(img.filename);
         } else if (!isInpaint) {
           setCurrentImage(imageUrl);

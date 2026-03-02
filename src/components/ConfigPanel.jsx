@@ -168,6 +168,9 @@ function ConfigTab({
           onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); setCanvasSize({ label: `${w} × ${h}`, w, h }); }}
           style={selectStyle}
         >
+          {!CANVAS_SIZES.find(s => s.w === canvasSize.w && s.h === canvasSize.h) && (
+            <option value={`${canvasSize.w}x${canvasSize.h}`}>{canvasSize.w} × {canvasSize.h}</option>
+          )}
           {CANVAS_SIZES.map((s) => <option key={s.label} value={`${s.w}x${s.h}`}>{s.label}</option>)}
         </select>
       </div>
