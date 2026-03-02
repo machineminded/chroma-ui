@@ -17,7 +17,7 @@ export default function ConfigPanel({
   // Model lists
   availableUnets, availableClips, availableVaes,
   // Sampling
-  canvasSize, setCanvasSize, steps, setSteps, cfg, setCfg,
+  genSize, setGenSize, steps, setSteps, cfg, setCfg,
   shift, setShift, betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
   seed, setSeed,
   // Styles
@@ -77,7 +77,7 @@ export default function ConfigPanel({
             lora2={lora2} setLora2={setLora2} lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
             availableLoras={availableLoras}
             availableUnets={availableUnets} availableClips={availableClips} availableVaes={availableVaes}
-            canvasSize={canvasSize} setCanvasSize={setCanvasSize}
+            genSize={genSize} setGenSize={setGenSize}
             steps={steps} setSteps={setSteps} cfg={cfg} setCfg={setCfg}
             shift={shift} setShift={setShift}
             betaAlpha={betaAlpha} setBetaAlpha={setBetaAlpha}
@@ -110,7 +110,7 @@ function ConfigTab({
   lora1, setLora1, lora1Strength, setLora1Strength,
   lora2, setLora2, lora2Strength, setLora2Strength,
   availableLoras, availableUnets, availableClips, availableVaes,
-  canvasSize, setCanvasSize,
+  genSize, setGenSize,
   steps, setSteps, cfg, setCfg, shift, setShift,
   betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
   seed, setSeed,
@@ -162,15 +162,12 @@ function ConfigTab({
       <div style={sectionHeaderStyle}>Sampling</div>
 
       <div>
-        <label style={labelStyle}>Canvas Size</label>
+        <label style={labelStyle}>Generation Size</label>
         <select
-          value={`${canvasSize.w}x${canvasSize.h}`}
-          onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); setCanvasSize({ label: `${w} × ${h}`, w, h }); }}
+          value={`${genSize.w}x${genSize.h}`}
+          onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); setGenSize({ label: `${w} × ${h}`, w, h }); }}
           style={selectStyle}
         >
-          {!CANVAS_SIZES.find(s => s.w === canvasSize.w && s.h === canvasSize.h) && (
-            <option value={`${canvasSize.w}x${canvasSize.h}`}>{canvasSize.w} × {canvasSize.h}</option>
-          )}
           {CANVAS_SIZES.map((s) => <option key={s.label} value={`${s.w}x${s.h}`}>{s.label}</option>)}
         </select>
       </div>

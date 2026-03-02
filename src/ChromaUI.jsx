@@ -26,6 +26,10 @@ export default function ChromaUI() {
 
   // ---- Canvas ----
   const [canvasSize, setCanvasSize] = useState(CANVAS_SIZES[DEFAULT_CANVAS_INDEX]);
+  // genSize is the size the user wants for the NEXT txt2img generation (controlled by the
+  // dropdown). It is intentionally decoupled from canvasSize so that upscaling the canvas
+  // does not force the next txt2img to run at the upscaled resolution.
+  const [genSize, setGenSize] = useState(CANVAS_SIZES[DEFAULT_CANVAS_INDEX]);
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
@@ -353,7 +357,7 @@ export default function ChromaUI() {
         setStatusMsg("Generating...");
         workflow = api.buildTxt2ImgWorkflow({
           positive: effectivePositive, negative,
-          width: canvasSize.w, height: canvasSize.h,
+          width: genSize.w, height: genSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
@@ -407,7 +411,7 @@ export default function ChromaUI() {
     setGenerating(false);
   }, [
     connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
-    activeTool, serverUrl, canvasSize, unetName, clipName, vaeName,
+    activeTool, serverUrl, canvasSize, genSize, unetName, clipName, vaeName,
     lora1, lora1Strength, lora2, lora2Strength,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
     upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
@@ -475,7 +479,7 @@ export default function ChromaUI() {
           availableUnets={availableUnets}
           availableClips={availableClips}
           availableVaes={availableVaes}
-          canvasSize={canvasSize} setCanvasSize={setCanvasSize}
+          genSize={genSize} setGenSize={setGenSize}
           steps={steps} setSteps={setSteps} cfg={cfg} setCfg={setCfg}
           shift={shift} setShift={setShift}
           betaAlpha={betaAlpha} setBetaAlpha={setBetaAlpha}
