@@ -1,18 +1,18 @@
 export const COMFYUI_DEFAULT = "http://127.0.0.1:8188";
 
 export const CANVAS_SIZES = [
-  { label: "512 × 512", w: 512, h: 512 },
-  { label: "768 × 768", w: 768, h: 768 },
-  { label: "1024 × 1024", w: 1024, h: 1024 },
-  { label: "768 × 1024", w: 768, h: 1024 },
-  { label: "1024 × 768", w: 1024, h: 768 },
-  { label: "1024 × 1536", w: 1024, h: 1536 },
-  { label: "1536 × 1024", w: 1536, h: 1024 },
-  { label: "1280 × 720", w: 1280, h: 720 },
-  { label: "1344 × 768", w: 1344, h: 768 },
+  { label: "1024 × 1024",           w: 1024, h: 1024 },
+  { label: "896 × 1152 — Portrait",  w: 896,  h: 1152 },
+  { label: "1152 × 896 — Landscape", w: 1152, h: 896  },
+  { label: "832 × 1216 — Portrait",  w: 832,  h: 1216 },
+  { label: "1216 × 832 — Landscape", w: 1216, h: 832  },
+  { label: "768 × 1344 — Portrait",  w: 768,  h: 1344 },
+  { label: "1344 × 768 — Landscape", w: 1344, h: 768  },
+  { label: "1024 × 1536 — Portrait", w: 1024, h: 1536 },
+  { label: "1536 × 1024 — Landscape",w: 1536, h: 1024 },
 ];
 
-export const DEFAULT_CANVAS_INDEX = 5; // 1024×1536
+export const DEFAULT_CANVAS_INDEX = 7; // 1024×1536 Portrait
 
 export const DEFAULTS = {
   steps: 8,

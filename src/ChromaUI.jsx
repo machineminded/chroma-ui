@@ -26,7 +26,10 @@ export default function ChromaUI() {
 
   // ---- Canvas ----
   const [canvasSize, setCanvasSize] = useState(CANVAS_SIZES[DEFAULT_CANVAS_INDEX]);
-  const preUpscaleCanvasSize = useRef(null);
+  // genSize is the size the user wants for the NEXT txt2img generation (controlled by the
+  // dropdown). It is intentionally decoupled from canvasSize so that upscaling the canvas
+  // does not force the next txt2img to run at the upscaled resolution.
+  const [genSize, setGenSize] = useState(CANVAS_SIZES[DEFAULT_CANVAS_INDEX]);
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
@@ -66,6 +69,7 @@ export default function ChromaUI() {
   const [brushSize, setBrushSize] = useState(DEFAULTS.brushSize);
   const [contextImageUrl, setContextImageUrl] = useState(null);
   const maskCanvasRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   // ---- Upscale ----
   const [upscaleBy, setUpscaleBy] = useState(DEFAULTS.upscaleBy);
@@ -112,6 +116,24 @@ export default function ChromaUI() {
   }, [serverUrl]);
 
   useEffect(() => { checkConnection(); }, []);
+
+  // ===========================================================================
+  // Canvas size — derived from the loaded image
+  // Whenever currentImage changes, read its actual pixel dimensions and sync
+  // canvasSize so that the canvas always matches the image being displayed.
+  // ===========================================================================
+  useEffect(() => {
+    if (!currentImage) return;
+    const img = new window.Image();
+    img.onload = () => {
+      setCanvasSize(prev =>
+        prev.w === img.naturalWidth && prev.h === img.naturalHeight
+          ? prev
+          : { w: img.naturalWidth, h: img.naturalHeight }
+      );
+    };
+    img.src = currentImage;
+  }, [currentImage]);
 
   // ===========================================================================
   // Keyboard shortcuts
@@ -226,6 +248,14 @@ export default function ChromaUI() {
       unetName, clipName, vaeName, lora1, lora1Strength, lora2, lora2Strength]);
 
   // ===========================================================================
+  // Cancel generation
+  // ===========================================================================
+  const handleCancel = useCallback(() => {
+    abortControllerRef.current?.abort();
+    api.interruptExecution(serverUrl);
+  }, [serverUrl]);
+
+  // ===========================================================================
   // Clear mask
   // ===========================================================================
   const handleClearMask = useCallback(() => {
@@ -271,6 +301,7 @@ export default function ChromaUI() {
     const isUpscale = activeTool === "upscale";
     if (isUpscale && !currentImage) { setStatusMsg("Generate an image first before upscaling"); return; }
 
+    abortControllerRef.current = new AbortController();
     setGenerating(true);
     setProgress(0);
     setStatusMsg("Queueing prompt...");
@@ -288,7 +319,6 @@ export default function ChromaUI() {
       if (isUpscale) {
         // ---- UPSCALE ----
         genType = "upscale";
-        preUpscaleCanvasSize.current = canvasSize;
         setStatusMsg("Uploading image for upscale...");
         const imageName = await uploadCurrentImage();
 
@@ -306,8 +336,6 @@ export default function ChromaUI() {
         // ---- INPAINT ----
         isInpaint = true;
         genType = "inpaint";
-        const effectiveSize = preUpscaleCanvasSize.current ?? canvasSize;
-        if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
         setStatusMsg("Uploading image + mask...");
         const { imageName, maskName } = await uploadCanvasAndMask();
 
@@ -320,18 +348,16 @@ export default function ChromaUI() {
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
           contextExtendFactor: inpaintContextExtend,
-          outputWidth: effectiveSize.w,
-          outputHeight: effectiveSize.h,
+          outputWidth: canvasSize.w,
+          outputHeight: canvasSize.h,
           contextOnly: false,
         });
       } else {
         // ---- TXT2IMG ----
-        const effectiveSize = preUpscaleCanvasSize.current ?? canvasSize;
-        if (preUpscaleCanvasSize.current) { setCanvasSize(preUpscaleCanvasSize.current); preUpscaleCanvasSize.current = null; }
         setStatusMsg("Generating...");
         workflow = api.buildTxt2ImgWorkflow({
           positive: effectivePositive, negative,
-          width: effectiveSize.w, height: effectiveSize.h,
+          width: genSize.w, height: genSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
@@ -341,7 +367,7 @@ export default function ChromaUI() {
 
       const { prompt_id } = await api.queuePrompt(serverUrl, workflow);
       const outputs = await api.pollForCompletion(serverUrl, prompt_id, {
-        steps, onProgress: setProgress,
+        steps, onProgress: setProgress, signal: abortControllerRef.current.signal,
       });
 
       console.log("[Chroma] Generation outputs:", JSON.stringify(Object.keys(outputs)));
@@ -358,30 +384,38 @@ export default function ChromaUI() {
       if (img) {
         const imageUrl = api.getImageUrl(serverUrl, img.filename, img.subfolder, img.type);
         if (isUpscale) {
-          setCanvasSize({ w: canvasSize.w * upscaleBy, h: canvasSize.h * upscaleBy });
+          setCurrentImage(imageUrl); // canvasSize will be synced by the currentImage useEffect
+          setCurrentImageFilename(img.filename);
+        } else if (!isInpaint) {
+          setCurrentImage(imageUrl);
+          setCurrentImageFilename(img.filename);
         }
-        setCurrentImage(imageUrl);
-        setCurrentImageFilename(img.filename);
+        // Inpaint: result goes to history only — canvas image and mask are preserved
+        // so the user can re-run until satisfied, then pick a result from History.
         setGeneratedImages((prev) => [
           { url: imageUrl, filename: img.filename, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
           ...prev,
         ]);
+        if (isInpaint) setActiveTab("History");
         setStatusMsg(genType === "upscale" ? `Upscaled ${upscaleBy}×!` : "Done!");
-        if (isInpaint) handleClearMask();
       } else {
         setStatusMsg("No output image found");
       }
     } catch (err) {
-      setStatusMsg(`Error: ${err.message}`);
+      if (err.name === "AbortError") {
+        setStatusMsg("Cancelled");
+      } else {
+        setStatusMsg(`Error: ${err.message}`);
+      }
     }
     setGenerating(false);
   }, [
     connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
-    activeTool, serverUrl, canvasSize, unetName, clipName, vaeName,
+    activeTool, serverUrl, canvasSize, genSize, unetName, clipName, vaeName,
     lora1, lora1Strength, lora2, lora2Strength,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
     upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
-    uploadCanvasAndMask, uploadCurrentImage, handleClearMask,
+    uploadCanvasAndMask, uploadCurrentImage,
   ]);
 
   // ===========================================================================
@@ -414,6 +448,7 @@ export default function ChromaUI() {
             inpaintContextExtend={inpaintContextExtend} setInpaintContextExtend={setInpaintContextExtend}
             brushSize={brushSize} setBrushSize={setBrushSize}
             onClearMask={handleClearMask}
+            onCancel={handleCancel}
             upscaleBy={upscaleBy} setUpscaleBy={setUpscaleBy}
             upscaleTileWidth={upscaleTileWidth} setUpscaleTileWidth={setUpscaleTileWidth}
             upscaleTileHeight={upscaleTileHeight} setUpscaleTileHeight={setUpscaleTileHeight}
@@ -444,7 +479,7 @@ export default function ChromaUI() {
           availableUnets={availableUnets}
           availableClips={availableClips}
           availableVaes={availableVaes}
-          canvasSize={canvasSize} setCanvasSize={setCanvasSize}
+          genSize={genSize} setGenSize={setGenSize}
           steps={steps} setSteps={setSteps} cfg={cfg} setCfg={setCfg}
           shift={shift} setShift={setShift}
           betaAlpha={betaAlpha} setBetaAlpha={setBetaAlpha}
