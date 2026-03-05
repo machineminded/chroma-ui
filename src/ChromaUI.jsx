@@ -210,7 +210,7 @@ export default function ChromaUI() {
   }, [serverUrl, currentImage, canvasSize, maskCanvasRef]);
 
   // ===========================================================================
-  // Inpaint context preview (called ~1s after brush stroke)
+  // Inpaint context preview (called immediately when brush stroke ends)
   // ===========================================================================
   const handleMaskStrokeDone = useCallback(async () => {
     if (!connected || !currentImage) return;
@@ -332,7 +332,7 @@ export default function ChromaUI() {
           upscaleBy, tileWidth: upscaleTileWidth, tileHeight: upscaleTileHeight,
           upscaleModelName: DEFAULTS.upscaleModelName,
         });
-      } else if (hasMask && currentImage) {
+      } else if (activeTool === "inpaint" && hasMask && currentImage) {
         // ---- INPAINT ----
         isInpaint = true;
         genType = "inpaint";

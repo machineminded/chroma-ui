@@ -38,7 +38,7 @@ export default function Canvas({
   maskCanvasRef,    // ref to the mask canvas (shared with parent for export)
   hasMask,
   setHasMask,
-  onMaskStrokeDone, // called ~1s after user stops drawing
+  onMaskStrokeDone, // called immediately when user lifts the brush
   inpaintDenoise,
   setInpaintDenoise,
   inpaintContextExtend,
@@ -62,7 +62,6 @@ export default function Canvas({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isDrawing, setIsDrawing] = useState(false);
-  const strokeTimerRef = useRef(null);
 
   // Scale factor for CSS display size vs native resolution
   const displayScale = Math.min(1, 600 / Math.max(canvasSize.w, canvasSize.h));
@@ -151,7 +150,6 @@ export default function Canvas({
         drawOnMask(x, y);
         setHasMask(true);
       }
-      clearTimeout(strokeTimerRef.current);
     }
   };
 
@@ -174,11 +172,7 @@ export default function Canvas({
     if (isPanning) setIsPanning(false);
     if (isDrawing) {
       setIsDrawing(false);
-      // Debounce: call onMaskStrokeDone 1s after last stroke
-      clearTimeout(strokeTimerRef.current);
-      strokeTimerRef.current = setTimeout(() => {
-        onMaskStrokeDone?.();
-      }, 1000);
+      onMaskStrokeDone?.();
     }
   };
 
