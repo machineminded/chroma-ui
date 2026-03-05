@@ -30,21 +30,35 @@ All application state lives in `src/ChromaUI.jsx` and is passed down to child co
 
 ```
 ChromaUI (all state)
-├── MenuBar
+├── MenuBar          (connection status display)
 ├── Toolbar          (tool selection + generate button)
 ├── Canvas           (image display + inpaint brush canvas overlay)
 ├── PromptBar        (positive/negative prompt inputs)
 ├── ConfigPanel      (tabs: Config / Styles / History)
 │   └── StylesPanel
-└── StatusBar
+└── StatusBar        (status message, canvas size, active tool, zoom)
 ```
 
 ### Generation modes
 
-`ChromaUI.handleGenerate` dispatches to one of three workflows based on UI state:
-- **txt2img** — default when no mask/image, uses `buildTxt2ImgWorkflow`
-- **inpaint** — when `hasMask && currentImage`, uses `buildInpaintWorkflow`
-- **upscale** — when `activeTool === "upscale" && currentImage`, uses `buildUpscaleWorkflow`
+`ChromaUI.handleGenerate` dispatches to one of three workflows based on UI state, checked in this order:
+
+- **upscale** — `activeTool === "upscale" && currentImage`, uses `buildUpscaleWorkflow`
+- **inpaint** — `activeTool === "inpaint" && hasMask && currentImage`, uses `buildInpaintWorkflow`
+- **txt2img** — default fallback, uses `buildTxt2ImgWorkflow`
+
+Switching away from the inpaint tool falls back to txt2img while retaining the mask.
+
+### Canvas sizing
+
+Two separate size states are maintained:
+
+- `canvasSize` — derived from the loaded image; synced automatically via `useEffect` when `currentImage` changes. Used as the output resolution for inpaint.
+- `genSize` — user-controlled dropdown. Only used as the output resolution for txt2img. Decoupled from `canvasSize` so upscaling doesn't force the next txt2img to run at the upscaled resolution.
+
+### Inpaint context preview
+
+When the user lifts the brush after painting a mask, `onMaskStrokeDone` fires immediately (no debounce). This triggers a partial inpaint workflow (`contextOnly: true`) that runs only up to the `InpaintCropImproved` node, retrieves the context preview from node `"38"`, displays it in the History tab, and switches the active tab to History.
 
 ### API layer
 
@@ -52,21 +66,57 @@ ChromaUI (all state)
 - `queuePrompt` / `getHistory` / `pollForCompletion` — job lifecycle
 - `uploadImage` — uploads canvas/mask PNGs to ComfyUI `/upload/image`
 - `buildTxt2ImgWorkflow` / `buildInpaintWorkflow` / `buildUpscaleWorkflow` — return hardcoded ComfyUI workflow JSON graphs
+- `fetchLoras` / `fetchModels` — introspect available models via `/object_info`
+- `interruptExecution` — POST `/interrupt` to cancel a running job
 
 **ComfyUI node IDs are hardcoded** in the workflow builders and in `ChromaUI.jsx`. Key output nodes:
-- Node `"7"` — stitched inpaint result
+- Node `"7"` — stitched inpaint result (final output)
 - Node `"740"` — txt2img / upscale output
-- Node `"38"` — inpaint context preview (skip this when looking for the final image)
+- Node `"38"` — inpaint context preview (always skipped when looking for final image)
+
+All three workflows share node IDs for the model loaders (UNET `731`, CLIP `733`, VAE `710`) so ComfyUI can cache model weights across generations.
+
+### History and currentImage
+
+- **txt2img / upscale** results update `currentImage`, which syncs `canvasSize`.
+- **Inpaint** results are added to history but do **not** update `currentImage` — the user picks from the History tab.
+- `generatedImages` stores `{ url, filename, prompt, timestamp, seed, type }` objects.
+
+### Cancellation
+
+Uses an `AbortController` to stop polling and calls `api.interruptExecution` (POST `/interrupt`) to halt ComfyUI mid-generation. Both user cancel and external ComfyUI interruption are handled.
+
+### Keyboard shortcuts
+
+Tool shortcuts (blocked when focus is in an input/textarea):
+
+| Key | Tool |
+|-----|------|
+| V | Pointer |
+| M | Move |
+| I | Inpaint |
+| U | Upscale |
+
+Canvas shortcuts:
+- `+` / `=` — zoom in (max 5×)
+- `-` — zoom out (min 0.1×)
+- `0` — reset zoom and pan
+- `Ctrl+Enter` — generate (works inside prompt textareas)
+- `Alt+drag` — erase mask while in inpaint tool
 
 ### Styling
 
 All styles are inline React objects — there are no CSS files. Shared style constants are in `src/styles.js`:
-- `COLORS` — the full color palette (dark theme, accent `#a78bfa`)
-- `inputStyle`, `selectStyle`, `sliderStyle`, `labelStyle`, etc. — reused across components
+- `COLORS` — full color palette (dark theme, accent `#a78bfa` purple)
+- `inputStyle`, `selectStyle`, `sliderStyle`, `labelStyle`, `valStyle`, etc. — reused across components
 
 ### Constants and defaults
 
-`src/constants.js` holds canvas size presets, the default ComfyUI URL, and `DEFAULTS` for all generation parameters (steps, cfg, model filenames, brush size, etc.).
+`src/constants.js` holds:
+- `COMFYUI_DEFAULT` — `http://127.0.0.1:8188`
+- `CANVAS_SIZES` — 9 presets (square, portrait, landscape at various resolutions)
+- `DEFAULT_CANVAS_INDEX` — `7` (1024×1536 portrait)
+- `DEFAULTS` — all generation parameter defaults (steps, cfg, shift, model filenames, brush size, inpaint/upscale settings, etc.)
 
 ### Style presets
 
