@@ -337,7 +337,7 @@ export function buildInpaintWorkflow({
         seed: seed, steps: steps || 8, cfg: cfg || 1,
         sampler_name: "euler", scheduler: "beta",
         denoise: denoise ?? 0.5,
-        model: ["36", 0],
+        model: ["701", 0],
         positive: ["19", 0], negative: ["19", 1], latent_image: ["19", 2],
       },
       _meta: { title: "KSampler" },
@@ -400,10 +400,9 @@ export function buildInpaintWorkflow({
       inputs: { clip_name: clipName || "t5xxl_fp8_e4m3fn_scaled.safetensors", type: "chroma", device: "default" },
       _meta: { title: "Load CLIP" },
     },
-    // FlowShift keeps its own ID (36) since shift value differs from txt2img (701)
-    "36": {
+    "701": {
       class_type: "ModelSamplingAuraFlow",
-      inputs: { shift: shift ?? 3, model: topModelRef },
+      inputs: { shift: shift ?? 1, model: topModelRef },
       _meta: { title: "Flow Shift" },
     },
     "741": {
@@ -428,7 +427,7 @@ export function buildInpaintWorkflow({
     delete workflow["26"]; // InpaintStitch
     delete workflow["11"]; // CLIP pos
     delete workflow["12"]; // CLIP neg
-    delete workflow["36"]; // FlowShift
+    delete workflow["701"]; // FlowShift
     delete workflow["731"]; // UNET
     delete workflow["733"]; // CLIP loader
     delete workflow["741"]; // T5
