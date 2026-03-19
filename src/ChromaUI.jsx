@@ -247,6 +247,11 @@ export default function ChromaUI() {
   }, [connected, currentImage, serverUrl, inpaintContextExtend, canvasSize, uploadCanvasAndMask,
       unetName, clipName, vaeName, lora1, lora1Strength, lora2, lora2Strength]);
 
+  // Re-run context preview when the context extend factor changes (if mask is active)
+  useEffect(() => {
+    if (hasMask && currentImage) handleMaskStrokeDone();
+  }, [inpaintContextExtend]);
+
   // ===========================================================================
   // Cancel generation
   // ===========================================================================
