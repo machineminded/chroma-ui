@@ -55,8 +55,10 @@ export default function ChromaUI() {
   // ---- LoRA ----
   const [lora1, setLora1] = useState("(none)");
   const [lora1Strength, setLora1Strength] = useState(1.0);
+  const [lora1Enabled, setLora1Enabled] = useState(true);
   const [lora2, setLora2] = useState("(none)");
   const [lora2Strength, setLora2Strength] = useState(1.0);
+  const [lora2Enabled, setLora2Enabled] = useState(true);
   const [availableLoras, setAvailableLoras] = useState([]);
   const [availableUnets, setAvailableUnets] = useState([]);
   const [availableClips, setAvailableClips] = useState([]);
@@ -229,6 +231,7 @@ export default function ChromaUI() {
         shift: DEFAULTS.inpaintShift,
         unetName, clipName, vaeName,
         lora1, lora1Strength, lora2, lora2Strength,
+        lora1Enabled, lora2Enabled,
       });
 
       const { prompt_id } = await api.queuePrompt(serverUrl, workflow);
@@ -245,7 +248,7 @@ export default function ChromaUI() {
       setStatusMsg(`Context preview failed: ${err.message}`);
     }
   }, [connected, currentImage, serverUrl, inpaintContextExtend, canvasSize, uploadCanvasAndMask,
-      unetName, clipName, vaeName, lora1, lora1Strength, lora2, lora2Strength]);
+      unetName, clipName, vaeName, lora1, lora1Strength, lora2, lora2Strength, lora1Enabled, lora2Enabled]);
 
   // Re-run context preview when the context extend factor changes (if mask is active)
   useEffect(() => {
@@ -304,7 +307,11 @@ export default function ChromaUI() {
     if (!positive.trim()) { setStatusMsg("Enter a prompt first"); return; }
 
     const isUpscale = activeTool === "upscale";
+    const isInpaintMode = activeTool === "inpaint";
+
     if (isUpscale && !currentImage) { setStatusMsg("Generate an image first before upscaling"); return; }
+    if (isInpaintMode && !currentImage) { setStatusMsg("Load or generate an image first before inpainting"); return; }
+    if (isInpaintMode && !hasMask) { setStatusMsg("Paint a mask on the image before inpainting"); return; }
 
     abortControllerRef.current = new AbortController();
     setGenerating(true);
@@ -334,10 +341,11 @@ export default function ChromaUI() {
           denoise: upscaleDenoise,
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
+          lora1Enabled, lora2Enabled,
           upscaleBy, tileWidth: upscaleTileWidth, tileHeight: upscaleTileHeight,
           upscaleModelName: DEFAULTS.upscaleModelName,
         });
-      } else if (activeTool === "inpaint" && hasMask && currentImage) {
+      } else if (isInpaintMode) {
         // ---- INPAINT ----
         isInpaint = true;
         genType = "inpaint";
@@ -352,6 +360,7 @@ export default function ChromaUI() {
           shift: DEFAULTS.inpaintShift,
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
+          lora1Enabled, lora2Enabled,
           contextExtendFactor: inpaintContextExtend,
           outputWidth: canvasSize.w,
           outputHeight: canvasSize.h,
@@ -366,6 +375,7 @@ export default function ChromaUI() {
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
           lora1, lora1Strength, lora2, lora2Strength,
+          lora1Enabled, lora2Enabled,
           betaAlpha, betaBeta,
         });
       }
@@ -417,7 +427,7 @@ export default function ChromaUI() {
   }, [
     connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
     activeTool, serverUrl, canvasSize, genSize, unetName, clipName, vaeName,
-    lora1, lora1Strength, lora2, lora2Strength,
+    lora1, lora1Strength, lora2, lora2Strength, lora1Enabled, lora2Enabled,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
     upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
     uploadCanvasAndMask, uploadCurrentImage,
@@ -478,8 +488,10 @@ export default function ChromaUI() {
           vaeName={vaeName} setVaeName={setVaeName}
           lora1={lora1} setLora1={setLora1}
           lora1Strength={lora1Strength} setLora1Strength={setLora1Strength}
+          lora1Enabled={lora1Enabled} setLora1Enabled={setLora1Enabled}
           lora2={lora2} setLora2={setLora2}
           lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
+          lora2Enabled={lora2Enabled} setLora2Enabled={setLora2Enabled}
           availableLoras={availableLoras}
           availableUnets={availableUnets}
           availableClips={availableClips}

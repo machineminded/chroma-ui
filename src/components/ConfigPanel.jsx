@@ -11,8 +11,8 @@ export default function ConfigPanel({
   // Model
   unetName, setUnetName, clipName, setClipName, vaeName, setVaeName,
   // LoRA
-  lora1, setLora1, lora1Strength, setLora1Strength,
-  lora2, setLora2, lora2Strength, setLora2Strength,
+  lora1, setLora1, lora1Strength, setLora1Strength, lora1Enabled, setLora1Enabled,
+  lora2, setLora2, lora2Strength, setLora2Strength, lora2Enabled, setLora2Enabled,
   availableLoras,
   // Model lists
   availableUnets, availableClips, availableVaes,
@@ -73,8 +73,8 @@ export default function ConfigPanel({
             unetName={unetName} setUnetName={setUnetName}
             clipName={clipName} setClipName={setClipName}
             vaeName={vaeName} setVaeName={setVaeName}
-            lora1={lora1} setLora1={setLora1} lora1Strength={lora1Strength} setLora1Strength={setLora1Strength}
-            lora2={lora2} setLora2={setLora2} lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
+            lora1={lora1} setLora1={setLora1} lora1Strength={lora1Strength} setLora1Strength={setLora1Strength} lora1Enabled={lora1Enabled} setLora1Enabled={setLora1Enabled}
+            lora2={lora2} setLora2={setLora2} lora2Strength={lora2Strength} setLora2Strength={setLora2Strength} lora2Enabled={lora2Enabled} setLora2Enabled={setLora2Enabled}
             availableLoras={availableLoras}
             availableUnets={availableUnets} availableClips={availableClips} availableVaes={availableVaes}
             genSize={genSize} setGenSize={setGenSize}
@@ -107,8 +107,8 @@ export default function ConfigPanel({
 function ConfigTab({
   serverUrl, setServerUrl, connected, checking, onCheckConnection,
   unetName, setUnetName, clipName, setClipName, vaeName, setVaeName,
-  lora1, setLora1, lora1Strength, setLora1Strength,
-  lora2, setLora2, lora2Strength, setLora2Strength,
+  lora1, setLora1, lora1Strength, setLora1Strength, lora1Enabled, setLora1Enabled,
+  lora2, setLora2, lora2Strength, setLora2Strength, lora2Enabled, setLora2Enabled,
   availableLoras, availableUnets, availableClips, availableVaes,
   genSize, setGenSize,
   steps, setSteps, cfg, setCfg, shift, setShift,
@@ -153,8 +153,8 @@ function ConfigTab({
           </span>
         )}
       </div>
-      <LoraSelect label="LoRA 1" value={lora1} onChange={setLora1} strength={lora1Strength} onStrengthChange={setLora1Strength} loras={availableLoras} />
-      <LoraSelect label="LoRA 2" value={lora2} onChange={setLora2} strength={lora2Strength} onStrengthChange={setLora2Strength} loras={availableLoras} />
+      <LoraSelect label="LoRA 1" value={lora1} onChange={setLora1} strength={lora1Strength} onStrengthChange={setLora1Strength} enabled={lora1Enabled} onEnabledChange={setLora1Enabled} loras={availableLoras} />
+      <LoraSelect label="LoRA 2" value={lora2} onChange={setLora2} strength={lora2Strength} onStrengthChange={setLora2Strength} enabled={lora2Enabled} onEnabledChange={setLora2Enabled} loras={availableLoras} />
 
       <div style={dividerStyle} />
 
@@ -308,22 +308,40 @@ function ModelSelect({ label, value, onChange, models }) {
 }
 
 // ---------- Reusable LoRA selector ----------
-function LoraSelect({ label, value, onChange, strength, onStrengthChange, loras }) {
+function LoraSelect({ label, value, onChange, strength, onStrengthChange, enabled, onEnabledChange, loras }) {
   return (
     <div>
-      <label style={labelStyle}>{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <label style={labelStyle}>{label}</label>
+        <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", userSelect: "none" }}>
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => onEnabledChange(e.target.checked)}
+            style={{ accentColor: COLORS.accent, cursor: "pointer" }}
+          />
+          <span style={{ fontSize: 9, color: enabled ? COLORS.textDimmer : COLORS.textDimmer, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            {enabled ? "on" : "off"}
+          </span>
+        </label>
+      </div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ ...selectStyle, opacity: enabled ? 1 : 0.4 }}
+      >
         <option value="(none)">(none)</option>
         {loras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
       </select>
       {value && value !== "(none)" && (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, opacity: enabled ? 1 : 0.4 }}>
             <span style={{ fontSize: 10, color: COLORS.textDimmer }}>Strength</span>
             <span style={valStyle}>{strength.toFixed(2)}</span>
           </div>
           <input type="range" min={-4} max={4} step={0.05} value={strength}
-            onChange={(e) => onStrengthChange(Number(e.target.value))} style={sliderStyle} />
+            onChange={(e) => onStrengthChange(Number(e.target.value))}
+            style={{ ...sliderStyle, opacity: enabled ? 1 : 0.4 }} />
         </>
       )}
     </div>

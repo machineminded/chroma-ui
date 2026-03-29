@@ -160,9 +160,9 @@ export function findOutputImage(outputs, preferredNodeId, skipNodes = []) {
 // Workflow builders
 // ---------------------------------------------------------------------------
 
-function buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, baseModelNode = "731") {
-  const hasLora1 = lora1 && lora1 !== "(none)";
-  const hasLora2 = lora2 && lora2 !== "(none)";
+function buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, baseModelNode = "731", lora1Enabled = true, lora2Enabled = true) {
+  const hasLora1 = lora1Enabled && lora1 && lora1 !== "(none)";
+  const hasLora2 = lora2Enabled && lora2 && lora2 !== "(none)";
 
   let topModelRef; // what feeds into FlowShift
   if (hasLora2) topModelRef = ["753", 0];
@@ -197,9 +197,10 @@ export function buildTxt2ImgWorkflow({
   positive, negative, width, height, seed, steps, cfg, shift,
   unetName, clipName, vaeName,
   lora1, lora1Strength, lora2, lora2Strength,
+  lora1Enabled = true, lora2Enabled = true,
   betaAlpha, betaBeta,
 }) {
-  const { topModelRef, nodes: loraNodes } = buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, "731");
+  const { topModelRef, nodes: loraNodes } = buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, "731", lora1Enabled, lora2Enabled);
 
   const workflow = {
     "298": {
@@ -302,11 +303,12 @@ export function buildInpaintWorkflow({
   imageName, maskName, positive, negative, seed, steps, cfg, denoise, shift,
   unetName, clipName, vaeName,
   lora1, lora1Strength, lora2, lora2Strength,
+  lora1Enabled = true, lora2Enabled = true,
   contextExtendFactor, outputWidth, outputHeight,
   contextOnly = false,
 }) {
   // Use the SAME base node ID (731) as txt2img so ComfyUI caches are shared
-  const { topModelRef, nodes: loraNodes } = buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, "731");
+  const { topModelRef, nodes: loraNodes } = buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, "731", lora1Enabled, lora2Enabled);
 
   const workflow = {
     // Source image (RGB only, no alpha needed)
@@ -488,9 +490,10 @@ export function buildUpscaleWorkflow({
   imageName, positive, negative, seed, steps, cfg, shift, denoise,
   unetName, clipName, vaeName,
   lora1, lora1Strength, lora2, lora2Strength,
+  lora1Enabled = true, lora2Enabled = true,
   upscaleBy, tileWidth, tileHeight, upscaleModelName,
 }) {
-  const { topModelRef, nodes: loraNodes } = buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, "731");
+  const { topModelRef, nodes: loraNodes } = buildLoraChain(lora1, lora1Strength, lora2, lora2Strength, "731", lora1Enabled, lora2Enabled);
 
   return {
     "1": {

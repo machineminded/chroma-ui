@@ -2,14 +2,9 @@ import Icons from "./Icons";
 import { COLORS } from "../styles";
 
 const tools = [
-  { id: "pointer", icon: Icons.Pointer, label: "Select (V)", shortcut: "v" },
-  { id: "move", icon: Icons.Move, label: "Move (M)", shortcut: "m" },
-  { id: "brush", icon: Icons.Brush, label: "Brush (B)", shortcut: "b" },
-  { id: "eraser", icon: Icons.Eraser, label: "Eraser (E)", shortcut: "e" },
+  { id: "pointer", icon: Icons.Pointer, label: "Text to Image (V)", shortcut: "v" },
   { id: "inpaint", icon: Icons.Inpaint, label: "Inpaint Mask (I)", shortcut: "i" },
   { id: "upscale", icon: Icons.Upscale, label: "Upscale (U)", shortcut: "u" },
-  { id: "crop", icon: Icons.Crop, label: "Crop (C)", shortcut: "c" },
-  { id: "zoom", icon: Icons.ZoomIn, label: "Zoom (Z)", shortcut: "z" },
 ];
 
 export { tools };
