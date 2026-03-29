@@ -3,12 +3,36 @@ import { COLORS } from "../styles";
 export default function PromptBar({ positive, setPositive, negative, setNegative, onGenerate, generating, hasMask, activeTool, selectedStyle }) {
   const buttonLabel = generating ? "..." : activeTool === "upscale" ? "Upscale" : hasMask ? "Inpaint" : "Generate";
 
-  function handleKeyDown(e) {
-    if (e.key === "Enter" && e.ctrlKey) {
-      e.preventDefault();
-      if (!generating && positive.trim()) onGenerate();
-    }
+  function makeKeyDownHandler(value, setValue) {
+    return function handleKeyDown(e) {
+      if (e.key === "Enter" && e.ctrlKey) {
+        e.preventDefault();
+        if (!generating && positive.trim()) onGenerate();
+        return;
+      }
+      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && e.ctrlKey) {
+        const textarea = e.target;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        if (start === end) return;
+
+        e.preventDefault();
+        const delta = e.key === "ArrowUp" ? 0.05 : -0.05;
+        const selected = value.slice(start, end);
+
+        // Already weighted? e.g. (butterfly:1.05)
+        const match = selected.match(/^\((.+):(\d+(?:\.\d+)?)\)$/);
+        const innerText = match ? match[1] : selected;
+        const currentWeight = match ? parseFloat(match[2]) : 1.0;
+        const newWeight = Math.max(0.05, Math.round((currentWeight + delta) * 100) / 100);
+        const newText = newWeight === 1.0 ? innerText : `(${innerText}:${newWeight.toFixed(2)})`;
+
+        setValue(value.slice(0, start) + newText + value.slice(end));
+        requestAnimationFrame(() => textarea.setSelectionRange(start, start + newText.length));
+      }
+    };
   }
+
   return (
     <div
       style={{
@@ -36,7 +60,7 @@ export default function PromptBar({ positive, setPositive, negative, setNegative
           }}
           onFocus={(e) => (e.target.style.borderColor = "#a78bfa55")}
           onBlur={(e) => (e.target.style.borderColor = COLORS.border)}
-          onKeyDown={handleKeyDown}
+          onKeyDown={makeKeyDownHandler(positive, setPositive)}
         />
         <button
           onClick={onGenerate}
@@ -83,9 +107,10 @@ export default function PromptBar({ positive, setPositive, negative, setNegative
           }}
           onFocus={(e) => (e.target.style.borderColor = "#ef444455")}
           onBlur={(e) => (e.target.style.borderColor = COLORS.border)}
-          onKeyDown={handleKeyDown}
+          onKeyDown={makeKeyDownHandler(negative, setNegative)}
         />
       </div>
     </div>
   );
 }
+
