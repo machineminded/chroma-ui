@@ -1,6 +1,7 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import Icons from "./Icons";
 import { COLORS, labelStyle, inputStyle, sliderStyle, valStyle, dividerStyle, sectionHeaderStyle, selectStyle } from "../styles";
-import { CANVAS_SIZES } from "../constants";
+import { MODEL_FAMILIES } from "../workflows";
 import StylesPanel from "./StylesPanel";
 
 export default function ConfigPanel({
@@ -8,11 +9,12 @@ export default function ConfigPanel({
   activeTab, setActiveTab,
   // Connection
   serverUrl, setServerUrl, connected, checking, onCheckConnection,
+  // Model family (strategy pattern)
+  modelFamilyId, setModelFamilyId, family,
   // Model
   unetName, setUnetName, clipName, setClipName, vaeName, setVaeName,
   // LoRA
-  lora1, setLora1, lora1Strength, setLora1Strength,
-  lora2, setLora2, lora2Strength, setLora2Strength,
+  loras, setLoraName, setLoraStrength,
   availableLoras,
   // Model lists
   availableUnets, availableClips, availableVaes,
@@ -70,11 +72,11 @@ export default function ConfigPanel({
           <ConfigTab
             serverUrl={serverUrl} setServerUrl={setServerUrl}
             connected={connected} checking={checking} onCheckConnection={onCheckConnection}
+            modelFamilyId={modelFamilyId} setModelFamilyId={setModelFamilyId} family={family}
             unetName={unetName} setUnetName={setUnetName}
             clipName={clipName} setClipName={setClipName}
             vaeName={vaeName} setVaeName={setVaeName}
-            lora1={lora1} setLora1={setLora1} lora1Strength={lora1Strength} setLora1Strength={setLora1Strength}
-            lora2={lora2} setLora2={setLora2} lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
+            loras={loras} setLoraName={setLoraName} setLoraStrength={setLoraStrength}
             availableLoras={availableLoras}
             availableUnets={availableUnets} availableClips={availableClips} availableVaes={availableVaes}
             genSize={genSize} setGenSize={setGenSize}
@@ -106,15 +108,17 @@ export default function ConfigPanel({
 // ---------- Config Tab ----------
 function ConfigTab({
   serverUrl, setServerUrl, connected, checking, onCheckConnection,
+  modelFamilyId, setModelFamilyId, family,
   unetName, setUnetName, clipName, setClipName, vaeName, setVaeName,
-  lora1, setLora1, lora1Strength, setLora1Strength,
-  lora2, setLora2, lora2Strength, setLora2Strength,
+  loras, setLoraName, setLoraStrength,
   availableLoras, availableUnets, availableClips, availableVaes,
   genSize, setGenSize,
   steps, setSteps, cfg, setCfg, shift, setShift,
   betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
   seed, setSeed,
 }) {
+  const isChroma = family.id === "chroma";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Connection */}
@@ -136,10 +140,24 @@ function ConfigTab({
 
       <div style={dividerStyle} />
 
+      {/* Model Family */}
+      <div>
+        <label style={labelStyle}>Model Family</label>
+        <select
+          value={modelFamilyId}
+          onChange={(e) => setModelFamilyId(e.target.value)}
+          style={selectStyle}
+        >
+          {Object.values(MODEL_FAMILIES).map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+        </select>
+      </div>
+
+      <div style={dividerStyle} />
+
       {/* Model */}
       <div style={sectionHeaderStyle}>Model</div>
       <ModelSelect label="UNET / Diffusion Model" value={unetName} onChange={setUnetName} models={availableUnets} />
-      <ModelSelect label="CLIP (T5)" value={clipName} onChange={setClipName} models={availableClips} />
+      <ModelSelect label="CLIP" value={clipName} onChange={setClipName} models={availableClips} />
       <ModelSelect label="VAE" value={vaeName} onChange={setVaeName} models={availableVaes} />
 
       <div style={dividerStyle} />
@@ -153,8 +171,17 @@ function ConfigTab({
           </span>
         )}
       </div>
-      <LoraSelect label="LoRA 1" value={lora1} onChange={setLora1} strength={lora1Strength} onStrengthChange={setLora1Strength} loras={availableLoras} />
-      <LoraSelect label="LoRA 2" value={lora2} onChange={setLora2} strength={lora2Strength} onStrengthChange={setLora2Strength} loras={availableLoras} />
+      {Array.from({ length: family.loraSlots }, (_, i) => (
+        <LoraSelect
+          key={i}
+          label={`LoRA ${i + 1}`}
+          value={loras[i].name}
+          onChange={(v) => setLoraName(i, v)}
+          strength={loras[i].strength}
+          onStrengthChange={(v) => setLoraStrength(i, v)}
+          loras={availableLoras}
+        />
+      ))}
 
       <div style={dividerStyle} />
 
@@ -168,19 +195,24 @@ function ConfigTab({
           onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); setGenSize({ label: `${w} × ${h}`, w, h }); }}
           style={selectStyle}
         >
-          {CANVAS_SIZES.map((s) => <option key={s.label} value={`${s.w}x${s.h}`}>{s.label}</option>)}
+          {family.canvasSizes.map((s) => <option key={s.label} value={`${s.w}x${s.h}`}>{s.label}</option>)}
         </select>
       </div>
 
       <SliderRow label="Steps" value={steps} onChange={setSteps} min={1} max={80} step={1} />
       <SliderRow label="CFG" value={cfg} onChange={setCfg} min={0} max={20} step={0.5} decimals={1} />
-      <SliderRow label="Flow Shift" value={shift} onChange={setShift} min={0} max={10} step={0.1} decimals={1} />
+      {isChroma && (
+        <SliderRow label="Flow Shift" value={shift} onChange={setShift} min={0} max={10} step={0.1} decimals={1} />
+      )}
 
-      <div style={dividerStyle} />
-
-      <div style={sectionHeaderStyle}>Beta Scheduler</div>
-      <SliderRow label="Alpha" value={betaAlpha} onChange={setBetaAlpha} min={0.01} max={2} step={0.01} decimals={2} />
-      <SliderRow label="Beta" value={betaBeta} onChange={setBetaBeta} min={0.01} max={2} step={0.01} decimals={2} />
+      {isChroma && (
+        <>
+          <div style={dividerStyle} />
+          <div style={sectionHeaderStyle}>Beta Scheduler</div>
+          <SliderRow label="Alpha" value={betaAlpha} onChange={setBetaAlpha} min={0.01} max={2} step={0.01} decimals={2} />
+          <SliderRow label="Beta" value={betaBeta} onChange={setBetaBeta} min={0.01} max={2} step={0.01} decimals={2} />
+        </>
+      )}
 
       {/* Seed */}
       <div>
@@ -307,15 +339,19 @@ function ModelSelect({ label, value, onChange, models }) {
   );
 }
 
-// ---------- Reusable LoRA selector ----------
+// ---------- Reusable LoRA selector (searchable) ----------
 function LoraSelect({ label, value, onChange, strength, onStrengthChange, loras }) {
   return (
     <div>
       <label style={labelStyle}>{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
-        <option value="(none)">(none)</option>
-        {loras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
-      </select>
+      <SearchableSelect
+        value={value}
+        onChange={onChange}
+        options={loras}
+        noneLabel="(none)"
+        placeholder="Search LoRAs..."
+        formatOption={(l) => l.replace(/\.[^.]+$/, "")}
+      />
       {value && value !== "(none)" && (
         <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
@@ -326,6 +362,110 @@ function LoraSelect({ label, value, onChange, strength, onStrengthChange, loras 
             onChange={(e) => onStrengthChange(Number(e.target.value))} style={sliderStyle} />
         </>
       )}
+    </div>
+  );
+}
+
+// ---------- Reusable searchable dropdown (select-with-a-filter-box) ----------
+function SearchableSelect({ value, onChange, options, noneLabel = "(none)", placeholder = "Search...", formatOption = (v) => v }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      setQuery("");
+      // Focus after the panel actually mounts
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matchesNone = noneLabel.toLowerCase().includes(q);
+    const opts = options.filter((o) => o.toLowerCase().includes(q));
+    return { matchesNone, opts };
+  }, [options, query, noneLabel]);
+
+  const select = (v) => { onChange(v); setOpen(false); };
+  const displayLabel = !value || value === "(none)" ? noneLabel : formatOption(value);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          ...selectStyle, textAlign: "left", display: "flex",
+          justifyContent: "space-between", alignItems: "center",
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayLabel}</span>
+        <span style={{ color: COLORS.textDimmer, marginLeft: 6, fontSize: 9 }}>▾</span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20,
+            background: COLORS.bgDarker, border: `1px solid ${COLORS.border}`,
+            borderRadius: 4, boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+            display: "flex", flexDirection: "column", maxHeight: 240, overflow: "hidden",
+          }}
+        >
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={placeholder}
+            style={{ ...inputStyle, margin: 4, width: "auto" }}
+          />
+          <div style={{ overflowY: "auto" }}>
+            {filtered.matchesNone && (
+              <SearchableOption label={noneLabel} selected={!value || value === "(none)"} onClick={() => select("(none)")} />
+            )}
+            {filtered.opts.map((o) => (
+              <SearchableOption key={o} label={formatOption(o)} selected={value === o} onClick={() => select(o)} />
+            ))}
+            {!filtered.matchesNone && filtered.opts.length === 0 && (
+              <div style={{ padding: "8px 10px", fontSize: 10, color: COLORS.textDimmer }}>No matches</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchableOption({ label, selected, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: "6px 10px", fontSize: 11, cursor: "pointer",
+        color: selected ? COLORS.accent : COLORS.text,
+        background: selected ? "#a78bfa15" : "transparent",
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}
+      onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = "#ffffff08"; }}
+      onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = "transparent"; }}
+    >
+      {label}
     </div>
   );
 }

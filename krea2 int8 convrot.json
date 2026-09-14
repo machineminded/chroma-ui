@@ -1,0 +1,1293 @@
+{
+  "id": "8889c97f-6720-42d8-9a6a-0c006e5ba72d",
+  "revision": 0,
+  "last_node_id": 111,
+  "last_link_id": 145,
+  "nodes": [
+    {
+      "id": 63,
+      "type": "VAELoader",
+      "pos": [
+        -297.0270161637062,
+        1160.2932954178307
+      ],
+      "size": [
+        320,
+        106.65625
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            74,
+            109
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.73",
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "ae.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors",
+            "directory": "vae"
+          }
+        ],
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        "wan_2.1_vae.safetensors"
+      ],
+      "widgets_values_named": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      }
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [
+        1299.942232246113,
+        293.1778321916983
+      ],
+      "size": [
+        485.33349609375,
+        684
+      ],
+      "flags": {
+        "collapsed": false,
+        "pinned": true
+      },
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 80
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.64",
+        "Node name for S&R": "SaveImage",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        "ComfyUI"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "ComfyUI"
+      }
+    },
+    {
+      "id": 86,
+      "type": "UNETLoader",
+      "pos": [
+        -306.69667027672784,
+        -147.60268628044457
+      ],
+      "size": [
+        365.3201668849309,
+        82
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            112
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "UNETLoader"
+      },
+      "widgets_values": [
+        "Krea2_Turbo_convrot_int8mixed-extra.safetensors",
+        "default"
+      ],
+      "widgets_values_named": {
+        "unet_name": "Krea2_Turbo_convrot_int8mixed-extra.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 72,
+      "type": "CLIPTextEncode",
+      "pos": [
+        154.7598244222006,
+        500.2932933892138
+      ],
+      "size": [
+        410,
+        160
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 118
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            84
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.73",
+        "Node name for S&R": "CLIPTextEncode",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        "high resolution photograph of a woman standing on the beach"
+      ],
+      "widgets_values_named": {
+        "text": "high resolution photograph of a woman standing on the beach"
+      }
+    },
+    {
+      "id": 65,
+      "type": "VAEDecode",
+      "pos": [
+        1019.9998200904802,
+        319.9999392082668
+      ],
+      "size": [
+        225,
+        96
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 73
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 74
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            80,
+            105
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.64",
+        "Node name for S&R": "VAEDecode",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      }
+    },
+    {
+      "id": 85,
+      "type": "UpscaleModelLoader",
+      "pos": [
+        1821.5789554567627,
+        179.9364439240772
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "links": [
+            111
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "UpscaleModelLoader"
+      },
+      "widgets_values": [
+        "4x_NMKD-Siax_200k.pth"
+      ],
+      "widgets_values_named": {
+        "model_name": "4x_NMKD-Siax_200k.pth"
+      }
+    },
+    {
+      "id": 62,
+      "type": "CLIPLoader",
+      "pos": [
+        -313.88986549672785,
+        943.600848348875
+      ],
+      "size": [
+        340,
+        169.3125
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            116
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.73",
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen_3_4b.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors",
+            "directory": "text_encoders"
+          }
+        ],
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        "qwen3vl_4b_fp8_scaled.safetensors",
+        "krea2",
+        "cpu"
+      ],
+      "widgets_values_named": {
+        "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+        "type": "krea2",
+        "device": "cpu"
+      }
+    },
+    {
+      "id": 83,
+      "type": "UltimateSDUpscale",
+      "pos": [
+        1808.6430403250504,
+        309.83733217864085
+      ],
+      "size": [
+        277.859375,
+        638
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 105
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 106
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 107
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 108
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 109
+        },
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 111
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            110
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui_ultimatesdupscale",
+        "ver": "1.7.2",
+        "Node name for S&R": "UltimateSDUpscale"
+      },
+      "widgets_values": [
+        1.25,
+        1336,
+        "fixed",
+        8,
+        1,
+        "er_sde",
+        "beta",
+        0.12,
+        "Linear",
+        1024,
+        1024,
+        32,
+        64,
+        "None",
+        1,
+        64,
+        8,
+        16,
+        true,
+        false,
+        1
+      ],
+      "widgets_values_named": {
+        "upscale_by": 1.25,
+        "seed": 1336,
+        "control_after_generate": "fixed",
+        "steps": 8,
+        "cfg": 1,
+        "sampler_name": "er_sde",
+        "scheduler": "beta",
+        "denoise": 0.12,
+        "mode_type": "Linear",
+        "tile_width": 1024,
+        "tile_height": 1024,
+        "mask_blur": 32,
+        "tile_padding": 64,
+        "seam_fix_mode": "None",
+        "seam_fix_denoise": 1,
+        "seam_fix_width": 64,
+        "seam_fix_mask_blur": 8,
+        "seam_fix_padding": 16,
+        "force_uniform_tiles": true,
+        "tiled_decode": false,
+        "batch_size": 1
+      }
+    },
+    {
+      "id": 107,
+      "type": "Note",
+      "pos": [
+        678.1736070234474,
+        -100.17312567180569
+      ],
+      "size": [
+        210,
+        150.0219467787901
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Size\n\n832 x 1216\n1664 x 2432\n2496 x 3648\n\n768 x 1344\n1536 x 2688\n"
+      ],
+      "widgets_values_named": {
+        "text": "Size\n\n832 x 1216\n1664 x 2432\n2496 x 3648\n\n768 x 1344\n1536 x 2688\n"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 68,
+      "type": "EmptySD3LatentImage",
+      "pos": [
+        652.8121809265035,
+        97.9458784931592
+      ],
+      "size": [
+        313.5937738454404,
+        168.50084596285694
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            78
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.64",
+        "Node name for S&R": "EmptySD3LatentImage",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        1664,
+        2432,
+        1
+      ],
+      "widgets_values_named": {
+        "width": 1664,
+        "height": 2432,
+        "batch_size": 1
+      }
+    },
+    {
+      "id": 77,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -298.344190682218,
+        715.3530937034803
+      ],
+      "size": [
+        353.89338256835936,
+        82
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 145
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            102,
+            106,
+            115
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.26.0",
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "krea2/skintone_v2_krea2_loraholic.safetensors",
+        1
+      ],
+      "widgets_values_named": {
+        "lora_name": "krea2/skintone_v2_krea2_loraholic.safetensors",
+        "strength_model": 1
+      }
+    },
+    {
+      "id": 84,
+      "type": "PreviewImage",
+      "pos": [
+        2123.436596786919,
+        307.28771921452903
+      ],
+      "size": [
+        418.1312350835269,
+        600.1425210605009
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 110
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": [],
+      "widgets_values_named": {}
+    },
+    {
+      "id": 82,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -295.50948866356555,
+        243.2622846553846
+      ],
+      "size": [
+        411.8118966064453,
+        84.66200000000003
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 103
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            113
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.26.0",
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "krea2/caldwell.safetensors",
+        1
+      ],
+      "widgets_values_named": {
+        "lora_name": "krea2/caldwell.safetensors",
+        "strength_model": 1
+      }
+    },
+    {
+      "id": 87,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -294.6781373385887,
+        382.5690087079496
+      ],
+      "size": [
+        410.03733825683594,
+        82
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 113
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            144
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.26.0",
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "krea2/mmwvhs.safetensors",
+        1
+      ],
+      "widgets_values_named": {
+        "lora_name": "krea2/mmwvhs.safetensors",
+        "strength_model": 1
+      }
+    },
+    {
+      "id": 70,
+      "type": "KSampler",
+      "pos": [
+        655.4797310261605,
+        319.9999392082668
+      ],
+      "size": [
+        315,
+        341.3125
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 102
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 76
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 85
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 78
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            73
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.64",
+        "Node name for S&R": "KSampler",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        3448,
+        "randomize",
+        8,
+        1,
+        "er_sde",
+        "simple",
+        1
+      ],
+      "widgets_values_named": {
+        "seed": 3448,
+        "control_after_generate": "randomize",
+        "steps": 8,
+        "cfg": 1,
+        "sampler_name": "er_sde",
+        "scheduler": "simple",
+        "denoise": 1
+      }
+    },
+    {
+      "id": 67,
+      "type": "CLIPTextEncode",
+      "pos": [
+        159.63619050159383,
+        250.7553264025364
+      ],
+      "size": [
+        420.0936999322222,
+        199.9396349104361
+      ],
+      "flags": {
+        "pinned": true
+      },
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 117
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            76,
+            107
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.73",
+        "Node name for S&R": "CLIPTextEncode",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "text": ""
+      }
+    },
+    {
+      "id": 78,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -302.8301121543974,
+        104.45383100626648
+      ],
+      "size": [
+        414.28599287553277,
+        82
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 93
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            103
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.26.0",
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "krea2/snofs_krea_v1_4.safetensors",
+        1
+      ],
+      "widgets_values_named": {
+        "lora_name": "krea2/snofs_krea_v1_4.safetensors",
+        "strength_model": 1
+      }
+    },
+    {
+      "id": 76,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -301.9912880065366,
+        -21.64477457982549
+      ],
+      "size": [
+        410.19861743164074,
+        82.80661743164057
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 112
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            93
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.26.0",
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "krea2/caldwell.safetensors",
+        1
+      ],
+      "widgets_values_named": {
+        "lora_name": "krea2/caldwell.safetensors",
+        "strength_model": 1
+      }
+    },
+    {
+      "id": 110,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -317.79999688541693,
+        556.9264401032839
+      ],
+      "size": [
+        410.03733825683594,
+        82
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 144
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            145
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.26.0",
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "krea2/canon_krea2.safetensors",
+        0.25
+      ],
+      "widgets_values_named": {
+        "lora_name": "krea2/canon_krea2.safetensors",
+        "strength_model": 0.25
+      }
+    },
+    {
+      "id": 89,
+      "type": "Note",
+      "pos": [
+        136.09640909288112,
+        -359.34778151425036
+      ],
+      "size": [
+        326.1301399766417,
+        550.4569299658829
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "## Portraits & Mood\n\n### Overcast street portrait\novercast street portrait, soft diffused daylight, flat even lighting, muted urban tones, candid stride, shallow depth of field, natural skin texture, subtle grain, editorial documentary feel\n\n### Sun-drenched rooftop\nsun-drenched rooftop portrait, harsh midday sunlight, strong shadows, warm concrete tones, lens flare, squinting candid expression, 35mm film grain, high contrast, summer city backdrop\n\n### Cozy autumn cabin\ncozy autumn cabin portrait, warm firelight glow, soft golden tones, knit textures, window light with falling leaves outside, gentle grain, muted earthy palette, intimate candid mood\n\n### Rainy window mood\nrainy window film photography, soft g-grey light, water droplets on glass, moody desaturated tones, reflective bokeh, contemplative expression, fine grain, melancholic quiet atmosphere\n\n### Cottagecore field\ncottagecore field portrait, soft golden afternoon light, wildflowers, flowing linen dress, dreamy pastel tones, gentle backlight, shallow depth of field, romantic film grain, pastoral mood\n\n### Black and white fine art\nblack and white fine art portrait, dramatic chiaroscuro lighting, deep rich blacks, soft highlight rolloff, timeless composition, medium format grain, expressive shadow detail, classic monochrome\n\n### Foggy forest ethereal\nfoggy forest film photography, soft misty diffusion, muted green and grey tones, ethereal backlight through trees, low contrast, dreamy hazy focus, quiet atmospheric mood, subtle grain\n\n### Snowy blue hour\nsnowy blue hour photography, cool blue tones, soft twilight glow, falling snow, warm window light accents, crisp cold atmosphere, gentle grain, serene winter mood\n\n### Desert warm dusk\ndesert dusk film photography, warm amber and dusty rose tones, long shadows, soft directional sunset light, arid landscape backdrop, windswept hair, fine grain, cinematic wide feel\n\n### Soft morning bedroom\nsoft morning bedroom film photography, warm hazy sunlight through curtains, gentle overexposed highlights, cozy linen tones, sleepy candid mood, dreamy soft focus, delicate fine grain\n\n### Golden field sunset\ngolden field sunset portrait, warm backlit haze, tall grass glowing, soft lens flare, dreamy amber tones, windswept candid pose, shallow depth of field, Kodak Portra grain\n\n### Misty mountain hike\nmisty mountain hike film photography, soft overcast light, cool muted greens and greys, layered fog, adventurous candid framing, crisp fresh air feel, subtle grain, expansive natural mood\n\n### Old Hollywood glamour\nold Hollywood glamour portrait, soft glowing key light, elegant black and white, defined cheekbone shadows, silk and pearls, halation highlights, timeless studio composition, classic film grain\n\n---\n\n## Editorial & Studio\n\n### Studio editorial fashion\nstudio editorial fashion photography, clean seamless backdrop, controlled softbox lighting, crisp detail, bold styling, subtle film grain, magazine color grade, confident posed composition\n\n### Editorial high fashion studio\neditorial high fashion studio photography, dramatic hard lighting, bold shadows, avant-garde styling, crisp detail, cool color grade, striking posed composition, subtle grain, magazine polish\n\n---\n\n## Vacation & Outdoors\n\n### Poolside summer\npoolside summer film photography, bright turquoise water, warm sun, wet reflective highlights, saturated retro tones, relaxed candid pose, Kodak Gold grain, nostalgic vacation feel\n\n### Tropical film vacation\ntropical film vacation photography, lush green palms, bright saturated sun, turquoise ocean, warm skin tones, relaxed candid pose, Fujifilm color palette, nostalgic getaway feel\n\n### Vintage road trip\nvintage road trip film photography, warm faded sunlight, open highway, dusty color shift, hand out the window candid, light leaks, 70s nostalgic palette, grainy analog texture\n\n### Candid documentary beach\ncandid documentary-style photograph of people enjoying a sunny beach, captured from a long distance with a 500mm telephoto lens, natural unposed moments, golden afternoon light, gentle ocean waves, realistic skin tones, wind-blown hair, beach towels and umbrellas, shallow depth of field, subtle film grain, photorealistic, high detail, authentic vacation atmosphere, compressed perspective, soft bokeh, DSLR photography, RAW photo, cinematic color grading\n\n---\n\n## Urban & Night\n\n### Analog concert crowd\nanalog concert film photography, stage lights bleeding red and purple, motion blur, high ISO grain, silhouetted crowd, raw energy, deep shadows, gritty low-light 35mm look\n\n### Moody rainy city night\nmoody rainy city night photography, neon reflections on wet pavement, deep shadows, cool cinematic grade, glowing signage bokeh, contemplative silhouette, high grain, noir atmosphere\n\n### Skate park daylight\nskate park daylight film photography, harsh midday sun, gritty concrete, dynamic candid motion, saturated street tones, high contrast, 35mm grain, raw youth-culture energy\n\n### Grunge basement flash\ngrunge basement flash photography, harsh direct on-camera flash, dark shadows, gritty texture, raw candid energy, slight overexposure on subject, lo-fi color shift, 90s underground aesthetic\n\n---\n\n## Cozy & Intimate\n\n### Coffee shop candid\ncoffee shop candid film photography, warm ambient light, soft window glow, cozy muted tones, steam and shallow focus, unposed natural moment, subtle grain, everyday intimate feel\n\n### Backyard string lights\nbackyard string lights evening, warm bokeh glow, soft dusk light, cozy gathering atmosphere, gentle flash fill, relaxed candid mood, film grain, nostalgic summer-night feel\n\n### Candlelit intimate dinner\ncandlelit intimate dinner photography, warm flickering glow, soft golden shadows, shallow focus, cozy muted tones, romantic candid mood, gentle grain, low-light film aesthetic\n\n### Retro diner\nretro diner film photography, warm neon and fluorescent mix, chrome and vinyl surfaces, saturated 1950s color palette, candid booth pose, soft grain, nostalgic Americana vibe\n\n---\n\n## Retro Tech & Lo-Fi\n\n### Vintage 90s camcorder\nvintage 90s camcorder footage still, VHS color bleed, soft interlaced lines, timestamp overlay, warm analog haze, slight motion blur, low resolution charm, nostalgic home-video look\n\n### Fluorescent office lo-fi\nfluorescent office lo-fi photography, flat greenish overhead light, mundane cubicle backdrop, deadpan candid expression, slight digital noise, muted institutional tones, ironic everyday aesthetic\n\n### Lo-fi webcam aesthetic\nlo-fi webcam aesthetic photography, soft low-resolution blur, flat indoor lighting, slight color noise, intimate close framing, muted casual tones, early-2000s digital charm, unpolished candid feel\n\n### Vintage Polaroid flash\nvintage Polaroid 600 flash photography, harsh flash falloff, washed pastel colors, soft white border, low contrast, slight overexposure, nostalgic instant-film texture, candid snapshot feel\n\n### iPhone selfie\niPhone front-camera selfie, arm's-length framing, slight wide-angle lens distortion, soft natural indoor light, HDR smartphone processing, mild skin smoothing, crisp digital clarity, faint edge softness, casual candid smile, everyday snapshot mood\n\n---\n\n## Candid / Caught-in-the-Moment\n\n### Mid-laugh candid\ncandid mid-laugh portrait, genuine unposed expression, head slightly tilted, natural window light, soft motion in hair, shallow depth of field, authentic skin texture, subtle film grain, warm everyday tones\n\n### Walking away glance\ncandid over-the-shoulder glance, subject caught mid-stride, slightly blurred background, natural daylight, unposed spontaneous energy, 35mm grain, documentary framing, muted realistic color\n\n### Kitchen morning moment\ncandid kitchen morning photography, subject unaware of camera, soft backlit window glow, coffee in hand, relaxed lived-in mood, gentle overexposure, fine grain, intimate everyday snapshot\n\n### Reaching across the table\ncandid caught-in-conversation shot, mid-gesture across a table, ambient restaurant light, soft bokeh background, animated natural expression, slight motion blur, warm grain, unposed dinner moment\n\n### Sunlight distraction\ncandid distracted-by-something portrait, subject looking off-frame, dappled sunlight, hand mid-motion, natural spontaneous framing, shallow focus, film grain, unforced authentic feel\n\n### Getting ready candid\ncandid getting-ready moment, mirror or half-turned pose, soft indoor lamp light, unposed casual expression, everyday clutter in frame, gentle grain, intimate behind-the-scenes documentary tone\n\n### Wind-caught street candid\ncandid street snapshot, subject caught mid-step in a gust, hair and clothing in motion, natural overcast light, blurred passersby, 35mm grain, spontaneous unstaged energy, muted urban palette\n\n---\n\n## Disposable Camera / Flash Washout\n\n### Direct flash washout\ndisposable camera flash photography, harsh direct on-camera flash, subject blown out and overexposed, deep black background falling into shadow, flat frontal lighting, grainy 35mm texture, low-fi color shift, candid unposed moment\n\n### Late night flash snapshot\n35mm point-and-shoot flash snapshot, washed-out subject in foreground, pitch-black surroundings, hard flash falloff, red-eye effect, gritty film grain, slight overexposure on skin, spontaneous nighttime candid\n\n### Flash-lit indoor party\ndisposable camera indoor flash photo, bright washed-out faces, dark room swallowed in shadow, harsh flash reflection, timestamp in corner, low-fi color, grainy texture, unposed party energy\n\n### Close-up flash burst\nclose-up disposable flash portrait, overexposed washed-out face, background dropping to black, harsh direct light, blown highlights on skin, heavy grain, candid mid-expression, raw point-and-shoot aesthetic\n\n### Flash on the sidewalk\nnighttime 35mm flash photography, subject lit bright and flat against dark street, deep black background, harsh shadowless flash, grainy film texture, slight motion blur, candid caught-in-the-moment feel\n\n### Bathroom mirror flash\ndisposable camera mirror flash photo, blown-out flash reflection, washed-out subject, dark cluttered background, harsh direct light, grainy 35mm texture, low-fi color shift, spontaneous unposed snapshot"
+      ],
+      "widgets_values_named": {
+        "text": "## Portraits & Mood\n\n### Overcast street portrait\novercast street portrait, soft diffused daylight, flat even lighting, muted urban tones, candid stride, shallow depth of field, natural skin texture, subtle grain, editorial documentary feel\n\n### Sun-drenched rooftop\nsun-drenched rooftop portrait, harsh midday sunlight, strong shadows, warm concrete tones, lens flare, squinting candid expression, 35mm film grain, high contrast, summer city backdrop\n\n### Cozy autumn cabin\ncozy autumn cabin portrait, warm firelight glow, soft golden tones, knit textures, window light with falling leaves outside, gentle grain, muted earthy palette, intimate candid mood\n\n### Rainy window mood\nrainy window film photography, soft g-grey light, water droplets on glass, moody desaturated tones, reflective bokeh, contemplative expression, fine grain, melancholic quiet atmosphere\n\n### Cottagecore field\ncottagecore field portrait, soft golden afternoon light, wildflowers, flowing linen dress, dreamy pastel tones, gentle backlight, shallow depth of field, romantic film grain, pastoral mood\n\n### Black and white fine art\nblack and white fine art portrait, dramatic chiaroscuro lighting, deep rich blacks, soft highlight rolloff, timeless composition, medium format grain, expressive shadow detail, classic monochrome\n\n### Foggy forest ethereal\nfoggy forest film photography, soft misty diffusion, muted green and grey tones, ethereal backlight through trees, low contrast, dreamy hazy focus, quiet atmospheric mood, subtle grain\n\n### Snowy blue hour\nsnowy blue hour photography, cool blue tones, soft twilight glow, falling snow, warm window light accents, crisp cold atmosphere, gentle grain, serene winter mood\n\n### Desert warm dusk\ndesert dusk film photography, warm amber and dusty rose tones, long shadows, soft directional sunset light, arid landscape backdrop, windswept hair, fine grain, cinematic wide feel\n\n### Soft morning bedroom\nsoft morning bedroom film photography, warm hazy sunlight through curtains, gentle overexposed highlights, cozy linen tones, sleepy candid mood, dreamy soft focus, delicate fine grain\n\n### Golden field sunset\ngolden field sunset portrait, warm backlit haze, tall grass glowing, soft lens flare, dreamy amber tones, windswept candid pose, shallow depth of field, Kodak Portra grain\n\n### Misty mountain hike\nmisty mountain hike film photography, soft overcast light, cool muted greens and greys, layered fog, adventurous candid framing, crisp fresh air feel, subtle grain, expansive natural mood\n\n### Old Hollywood glamour\nold Hollywood glamour portrait, soft glowing key light, elegant black and white, defined cheekbone shadows, silk and pearls, halation highlights, timeless studio composition, classic film grain\n\n---\n\n## Editorial & Studio\n\n### Studio editorial fashion\nstudio editorial fashion photography, clean seamless backdrop, controlled softbox lighting, crisp detail, bold styling, subtle film grain, magazine color grade, confident posed composition\n\n### Editorial high fashion studio\neditorial high fashion studio photography, dramatic hard lighting, bold shadows, avant-garde styling, crisp detail, cool color grade, striking posed composition, subtle grain, magazine polish\n\n---\n\n## Vacation & Outdoors\n\n### Poolside summer\npoolside summer film photography, bright turquoise water, warm sun, wet reflective highlights, saturated retro tones, relaxed candid pose, Kodak Gold grain, nostalgic vacation feel\n\n### Tropical film vacation\ntropical film vacation photography, lush green palms, bright saturated sun, turquoise ocean, warm skin tones, relaxed candid pose, Fujifilm color palette, nostalgic getaway feel\n\n### Vintage road trip\nvintage road trip film photography, warm faded sunlight, open highway, dusty color shift, hand out the window candid, light leaks, 70s nostalgic palette, grainy analog texture\n\n### Candid documentary beach\ncandid documentary-style photograph of people enjoying a sunny beach, captured from a long distance with a 500mm telephoto lens, natural unposed moments, golden afternoon light, gentle ocean waves, realistic skin tones, wind-blown hair, beach towels and umbrellas, shallow depth of field, subtle film grain, photorealistic, high detail, authentic vacation atmosphere, compressed perspective, soft bokeh, DSLR photography, RAW photo, cinematic color grading\n\n---\n\n## Urban & Night\n\n### Analog concert crowd\nanalog concert film photography, stage lights bleeding red and purple, motion blur, high ISO grain, silhouetted crowd, raw energy, deep shadows, gritty low-light 35mm look\n\n### Moody rainy city night\nmoody rainy city night photography, neon reflections on wet pavement, deep shadows, cool cinematic grade, glowing signage bokeh, contemplative silhouette, high grain, noir atmosphere\n\n### Skate park daylight\nskate park daylight film photography, harsh midday sun, gritty concrete, dynamic candid motion, saturated street tones, high contrast, 35mm grain, raw youth-culture energy\n\n### Grunge basement flash\ngrunge basement flash photography, harsh direct on-camera flash, dark shadows, gritty texture, raw candid energy, slight overexposure on subject, lo-fi color shift, 90s underground aesthetic\n\n---\n\n## Cozy & Intimate\n\n### Coffee shop candid\ncoffee shop candid film photography, warm ambient light, soft window glow, cozy muted tones, steam and shallow focus, unposed natural moment, subtle grain, everyday intimate feel\n\n### Backyard string lights\nbackyard string lights evening, warm bokeh glow, soft dusk light, cozy gathering atmosphere, gentle flash fill, relaxed candid mood, film grain, nostalgic summer-night feel\n\n### Candlelit intimate dinner\ncandlelit intimate dinner photography, warm flickering glow, soft golden shadows, shallow focus, cozy muted tones, romantic candid mood, gentle grain, low-light film aesthetic\n\n### Retro diner\nretro diner film photography, warm neon and fluorescent mix, chrome and vinyl surfaces, saturated 1950s color palette, candid booth pose, soft grain, nostalgic Americana vibe\n\n---\n\n## Retro Tech & Lo-Fi\n\n### Vintage 90s camcorder\nvintage 90s camcorder footage still, VHS color bleed, soft interlaced lines, timestamp overlay, warm analog haze, slight motion blur, low resolution charm, nostalgic home-video look\n\n### Fluorescent office lo-fi\nfluorescent office lo-fi photography, flat greenish overhead light, mundane cubicle backdrop, deadpan candid expression, slight digital noise, muted institutional tones, ironic everyday aesthetic\n\n### Lo-fi webcam aesthetic\nlo-fi webcam aesthetic photography, soft low-resolution blur, flat indoor lighting, slight color noise, intimate close framing, muted casual tones, early-2000s digital charm, unpolished candid feel\n\n### Vintage Polaroid flash\nvintage Polaroid 600 flash photography, harsh flash falloff, washed pastel colors, soft white border, low contrast, slight overexposure, nostalgic instant-film texture, candid snapshot feel\n\n### iPhone selfie\niPhone front-camera selfie, arm's-length framing, slight wide-angle lens distortion, soft natural indoor light, HDR smartphone processing, mild skin smoothing, crisp digital clarity, faint edge softness, casual candid smile, everyday snapshot mood\n\n---\n\n## Candid / Caught-in-the-Moment\n\n### Mid-laugh candid\ncandid mid-laugh portrait, genuine unposed expression, head slightly tilted, natural window light, soft motion in hair, shallow depth of field, authentic skin texture, subtle film grain, warm everyday tones\n\n### Walking away glance\ncandid over-the-shoulder glance, subject caught mid-stride, slightly blurred background, natural daylight, unposed spontaneous energy, 35mm grain, documentary framing, muted realistic color\n\n### Kitchen morning moment\ncandid kitchen morning photography, subject unaware of camera, soft backlit window glow, coffee in hand, relaxed lived-in mood, gentle overexposure, fine grain, intimate everyday snapshot\n\n### Reaching across the table\ncandid caught-in-conversation shot, mid-gesture across a table, ambient restaurant light, soft bokeh background, animated natural expression, slight motion blur, warm grain, unposed dinner moment\n\n### Sunlight distraction\ncandid distracted-by-something portrait, subject looking off-frame, dappled sunlight, hand mid-motion, natural spontaneous framing, shallow focus, film grain, unforced authentic feel\n\n### Getting ready candid\ncandid getting-ready moment, mirror or half-turned pose, soft indoor lamp light, unposed casual expression, everyday clutter in frame, gentle grain, intimate behind-the-scenes documentary tone\n\n### Wind-caught street candid\ncandid street snapshot, subject caught mid-step in a gust, hair and clothing in motion, natural overcast light, blurred passersby, 35mm grain, spontaneous unstaged energy, muted urban palette\n\n---\n\n## Disposable Camera / Flash Washout\n\n### Direct flash washout\ndisposable camera flash photography, harsh direct on-camera flash, subject blown out and overexposed, deep black background falling into shadow, flat frontal lighting, grainy 35mm texture, low-fi color shift, candid unposed moment\n\n### Late night flash snapshot\n35mm point-and-shoot flash snapshot, washed-out subject in foreground, pitch-black surroundings, hard flash falloff, red-eye effect, gritty film grain, slight overexposure on skin, spontaneous nighttime candid\n\n### Flash-lit indoor party\ndisposable camera indoor flash photo, bright washed-out faces, dark room swallowed in shadow, harsh flash reflection, timestamp in corner, low-fi color, grainy texture, unposed party energy\n\n### Close-up flash burst\nclose-up disposable flash portrait, overexposed washed-out face, background dropping to black, harsh direct light, blown highlights on skin, heavy grain, candid mid-expression, raw point-and-shoot aesthetic\n\n### Flash on the sidewalk\nnighttime 35mm flash photography, subject lit bright and flat against dark street, deep black background, harsh shadowless flash, grainy film texture, slight motion blur, candid caught-in-the-moment feel\n\n### Bathroom mirror flash\ndisposable camera mirror flash photo, blown-out flash reflection, washed-out subject, dark cluttered background, harsh direct light, grainy 35mm texture, low-fi color shift, spontaneous unposed snapshot"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 92,
+      "type": "ApplyKrea2NegPiP",
+      "pos": [
+        163.6231174167501,
+        592.7602681761134
+      ],
+      "size": [
+        300.318359375,
+        706.5730468749999
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 13,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 115
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 116
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": []
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            117,
+            118
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "blue-pen5805/ComfyUI-krea2-negpip",
+        "ver": "ad98c02334ca328d6e5c3faee3faae7c551851bb",
+        "Node name for S&R": "ApplyKrea2NegPiP"
+      },
+      "widgets_values": [
+        1,
+        false,
+        0,
+        27,
+        1
+      ],
+      "widgets_values_named": {
+        "value_strength": 1,
+        "patch_txtfusion_refiners": false,
+        "block_start": 0,
+        "block_end": 27,
+        "block_stride": 1
+      }
+    },
+    {
+      "id": 73,
+      "type": "ConditioningZeroOut",
+      "pos": [
+        407.9076055194398,
+        485.5711018202037
+      ],
+      "size": [
+        204.134765625,
+        26
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 84
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            85,
+            108
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.26.0",
+        "Node name for S&R": "ConditioningZeroOut"
+      }
+    }
+  ],
+  "links": [
+    [
+      73,
+      70,
+      0,
+      65,
+      0,
+      "LATENT"
+    ],
+    [
+      74,
+      63,
+      0,
+      65,
+      1,
+      "VAE"
+    ],
+    [
+      76,
+      67,
+      0,
+      70,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      78,
+      68,
+      0,
+      70,
+      3,
+      "LATENT"
+    ],
+    [
+      80,
+      65,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      84,
+      72,
+      0,
+      73,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      85,
+      73,
+      0,
+      70,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      93,
+      76,
+      0,
+      78,
+      0,
+      "MODEL"
+    ],
+    [
+      102,
+      77,
+      0,
+      70,
+      0,
+      "MODEL"
+    ],
+    [
+      103,
+      78,
+      0,
+      82,
+      0,
+      "MODEL"
+    ],
+    [
+      105,
+      65,
+      0,
+      83,
+      0,
+      "IMAGE"
+    ],
+    [
+      106,
+      77,
+      0,
+      83,
+      1,
+      "MODEL"
+    ],
+    [
+      107,
+      67,
+      0,
+      83,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      108,
+      73,
+      0,
+      83,
+      3,
+      "CONDITIONING"
+    ],
+    [
+      109,
+      63,
+      0,
+      83,
+      4,
+      "VAE"
+    ],
+    [
+      110,
+      83,
+      0,
+      84,
+      0,
+      "IMAGE"
+    ],
+    [
+      111,
+      85,
+      0,
+      83,
+      5,
+      "UPSCALE_MODEL"
+    ],
+    [
+      112,
+      86,
+      0,
+      76,
+      0,
+      "MODEL"
+    ],
+    [
+      113,
+      82,
+      0,
+      87,
+      0,
+      "MODEL"
+    ],
+    [
+      115,
+      77,
+      0,
+      92,
+      0,
+      "MODEL"
+    ],
+    [
+      116,
+      62,
+      0,
+      92,
+      1,
+      "CLIP"
+    ],
+    [
+      117,
+      92,
+      1,
+      67,
+      0,
+      "CLIP"
+    ],
+    [
+      118,
+      92,
+      1,
+      72,
+      0,
+      "CLIP"
+    ],
+    [
+      144,
+      87,
+      0,
+      110,
+      0,
+      "MODEL"
+    ],
+    [
+      145,
+      110,
+      0,
+      77,
+      0,
+      "MODEL"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9229599817706482,
+      "offset": [
+        1967.1024547159277,
+        487.7904812970239
+      ]
+    },
+    "frontendVersion": "1.51.10"
+  },
+  "version": 0.4
+}

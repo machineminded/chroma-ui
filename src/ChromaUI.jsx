@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import * as api from "./api/comfyApi";
 import { tools } from "./components/Toolbar";
 import { COMFYUI_DEFAULT, CANVAS_SIZES, DEFAULT_CANVAS_INDEX, DEFAULTS } from "./constants";
+import { MODEL_FAMILIES, DEFAULT_FAMILY_ID } from "./workflows";
 import { COLORS } from "./styles";
 
 import MenuBar from "./components/MenuBar";
@@ -41,6 +42,10 @@ export default function ChromaUI() {
   const [generatedImages, setGeneratedImages] = useState([]);
   const [currentImage, setCurrentImage] = useState(null);
 
+  // ---- Model family (strategy pattern — Chroma vs. Krea2 workflow builders) ----
+  const [modelFamilyId, setModelFamilyId] = useState(DEFAULT_FAMILY_ID);
+  const family = MODEL_FAMILIES[modelFamilyId];
+
   // ---- Model config ----
   const [seed, setSeed] = useState(-1);
   const [steps, setSteps] = useState(DEFAULTS.steps);
@@ -53,10 +58,17 @@ export default function ChromaUI() {
   const [vaeName, setVaeName] = useState(DEFAULTS.vaeName);
 
   // ---- LoRA ----
-  const [lora1, setLora1] = useState("(none)");
-  const [lora1Strength, setLora1Strength] = useState(1.0);
-  const [lora2, setLora2] = useState("(none)");
-  const [lora2Strength, setLora2Strength] = useState(1.0);
+  // Always allocate the max slot count (6, for Krea2); each family only
+  // reads/shows the first `family.loraSlots` entries.
+  const [loras, setLoras] = useState(
+    Array.from({ length: 6 }, () => ({ name: "(none)", strength: 1.0 }))
+  );
+  const setLoraName = useCallback((i, name) => {
+    setLoras((prev) => prev.map((l, idx) => (idx === i ? { ...l, name } : l)));
+  }, []);
+  const setLoraStrength = useCallback((i, strength) => {
+    setLoras((prev) => prev.map((l, idx) => (idx === i ? { ...l, strength } : l)));
+  }, []);
   const [availableLoras, setAvailableLoras] = useState([]);
   const [availableUnets, setAvailableUnets] = useState([]);
   const [availableClips, setAvailableClips] = useState([]);
@@ -92,16 +104,16 @@ export default function ChromaUI() {
       const res = await fetch(`${serverUrl}/system_stats`);
       if (res.ok) {
         setConnected(true);
-        const [loras, models] = await Promise.all([
+        const [loraList, models] = await Promise.all([
           api.fetchLoras(serverUrl),
           api.fetchModels(serverUrl),
         ]);
-        setAvailableLoras(loras);
+        setAvailableLoras(loraList);
         setAvailableUnets(models.unets);
         setAvailableClips(models.clips);
         setAvailableVaes(models.vaes);
-        setStatusMsg(loras.length > 0
-          ? `Connected — ${loras.length} LoRA${loras.length !== 1 ? "s" : ""} found`
+        setStatusMsg(loraList.length > 0
+          ? `Connected — ${loraList.length} LoRA${loraList.length !== 1 ? "s" : ""} found`
           : "Connected to ComfyUI"
         );
       } else {
@@ -116,6 +128,25 @@ export default function ChromaUI() {
   }, [serverUrl]);
 
   useEffect(() => { checkConnection(); }, []);
+
+  // ===========================================================================
+  // Reset model config to the active family's defaults whenever the family
+  // changes — Chroma and Krea2 models/samplers are not interchangeable.
+  // ===========================================================================
+  useEffect(() => {
+    const d = family.defaults;
+    setUnetName(d.unetName);
+    setClipName(d.clipName);
+    setVaeName(d.vaeName);
+    setSteps(d.steps);
+    setCfg(d.cfg);
+    if (d.shift !== undefined) setShift(d.shift);
+    if (d.betaAlpha !== undefined) setBetaAlpha(d.betaAlpha);
+    if (d.betaBeta !== undefined) setBetaBeta(d.betaBeta);
+    setInpaintDenoise(d.inpaintDenoise);
+    setInpaintContextExtend(d.inpaintContextExtend);
+    setGenSize(family.canvasSizes[family.defaultCanvasIndex]);
+  }, [modelFamilyId]);
 
   // ===========================================================================
   // Canvas size — derived from the loaded image
@@ -219,7 +250,7 @@ export default function ChromaUI() {
     try {
       const { imageName, maskName } = await uploadCanvasAndMask();
 
-      const workflow = api.buildInpaintWorkflow({
+      const workflow = family.buildInpaint({
         imageName, maskName,
         contextExtendFactor: inpaintContextExtend,
         outputWidth: canvasSize.w,
@@ -228,13 +259,13 @@ export default function ChromaUI() {
         positive: "", negative: "", seed: 0, steps: 8, cfg: 1, denoise: 0.5,
         shift: DEFAULTS.inpaintShift,
         unetName, clipName, vaeName,
-        lora1, lora1Strength, lora2, lora2Strength,
+        loras: loras.slice(0, family.loraSlots),
       });
 
       const { prompt_id } = await api.queuePrompt(serverUrl, workflow);
       const outputs = await api.pollForCompletion(serverUrl, prompt_id, { steps: 1, maxAttempts: 30 });
 
-      const ctxImg = api.findOutputImage(outputs, "38");
+      const ctxImg = api.findOutputImage(outputs, family.outputNodes.inpaint.contextNode);
       if (ctxImg) {
         const url = api.getImageUrl(serverUrl, ctxImg.filename, ctxImg.subfolder, ctxImg.type);
         setContextImageUrl(url);
@@ -245,7 +276,7 @@ export default function ChromaUI() {
       setStatusMsg(`Context preview failed: ${err.message}`);
     }
   }, [connected, currentImage, serverUrl, inpaintContextExtend, canvasSize, uploadCanvasAndMask,
-      unetName, clipName, vaeName, lora1, lora1Strength, lora2, lora2Strength]);
+      family, unetName, clipName, vaeName, loras]);
 
   // Re-run context preview when the context extend factor changes (if mask is active)
   useEffect(() => {
@@ -305,6 +336,10 @@ export default function ChromaUI() {
 
     const isUpscale = activeTool === "upscale";
     if (isUpscale && !currentImage) { setStatusMsg("Generate an image first before upscaling"); return; }
+    if (isUpscale && !family.supportsUpscale) {
+      setStatusMsg(`${family.label} doesn't support upscale — try a native high-res size instead`);
+      return;
+    }
 
     abortControllerRef.current = new AbortController();
     setGenerating(true);
@@ -328,12 +363,12 @@ export default function ChromaUI() {
         const imageName = await uploadCurrentImage();
 
         setStatusMsg("Upscaling...");
-        workflow = api.buildUpscaleWorkflow({
+        workflow = family.buildUpscale({
           imageName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg, shift,
           denoise: upscaleDenoise,
           unetName, clipName, vaeName,
-          lora1, lora1Strength, lora2, lora2Strength,
+          loras: loras.slice(0, family.loraSlots),
           upscaleBy, tileWidth: upscaleTileWidth, tileHeight: upscaleTileHeight,
           upscaleModelName: DEFAULTS.upscaleModelName,
         });
@@ -345,13 +380,13 @@ export default function ChromaUI() {
         const { imageName, maskName } = await uploadCanvasAndMask();
 
         setStatusMsg("Generating inpaint...");
-        workflow = api.buildInpaintWorkflow({
+        workflow = family.buildInpaint({
           imageName, maskName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg,
           denoise: inpaintDenoise,
           shift: DEFAULTS.inpaintShift,
           unetName, clipName, vaeName,
-          lora1, lora1Strength, lora2, lora2Strength,
+          loras: loras.slice(0, family.loraSlots),
           contextExtendFactor: inpaintContextExtend,
           outputWidth: canvasSize.w,
           outputHeight: canvasSize.h,
@@ -360,12 +395,12 @@ export default function ChromaUI() {
       } else {
         // ---- TXT2IMG ----
         setStatusMsg("Generating...");
-        workflow = api.buildTxt2ImgWorkflow({
+        workflow = family.buildTxt2Img({
           positive: effectivePositive, negative,
           width: genSize.w, height: genSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
-          lora1, lora1Strength, lora2, lora2Strength,
+          loras: loras.slice(0, family.loraSlots),
           betaAlpha, betaBeta,
         });
       }
@@ -380,10 +415,10 @@ export default function ChromaUI() {
         if (out.images) console.log(`[Chroma]   Node ${nodeId}: ${out.images.length} image(s) — ${out.images[0]?.filename}`);
       }
 
-      // For inpaint, get node 7 (stitched result), skip node 38 (context preview).
-      // For txt2img and upscale, get node 740.
-      const preferredNode = isInpaint ? "7" : "740";
-      const skipNodes = isInpaint ? ["38"] : [];
+      // For inpaint, get the stitched result node, skipping the context preview node.
+      // For txt2img and upscale, get the family's txt2img output node.
+      const preferredNode = isInpaint ? family.outputNodes.inpaint.node : family.outputNodes.txt2img.node;
+      const skipNodes = isInpaint ? family.outputNodes.inpaint.skip : [];
       const img = api.findOutputImage(outputs, preferredNode, skipNodes);
 
       if (img) {
@@ -417,7 +452,7 @@ export default function ChromaUI() {
   }, [
     connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
     activeTool, serverUrl, canvasSize, genSize, unetName, clipName, vaeName,
-    lora1, lora1Strength, lora2, lora2Strength,
+    family, loras,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
     upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
     uploadCanvasAndMask, uploadCurrentImage,
@@ -439,7 +474,8 @@ export default function ChromaUI() {
       <MenuBar connected={connected} />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <Toolbar activeTool={activeTool} setActiveTool={setActiveTool} onGenerate={handleGenerate} />
+        <Toolbar activeTool={activeTool} setActiveTool={setActiveTool} onGenerate={handleGenerate}
+          disabledTools={family.supportsUpscale ? [] : ["upscale"]} />
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <Canvas
@@ -473,13 +509,11 @@ export default function ChromaUI() {
           selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle}
           serverUrl={serverUrl} setServerUrl={setServerUrl}
           connected={connected} checking={checking} onCheckConnection={checkConnection}
+          modelFamilyId={modelFamilyId} setModelFamilyId={setModelFamilyId} family={family}
           unetName={unetName} setUnetName={setUnetName}
           clipName={clipName} setClipName={setClipName}
           vaeName={vaeName} setVaeName={setVaeName}
-          lora1={lora1} setLora1={setLora1}
-          lora1Strength={lora1Strength} setLora1Strength={setLora1Strength}
-          lora2={lora2} setLora2={setLora2}
-          lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
+          loras={loras} setLoraName={setLoraName} setLoraStrength={setLoraStrength}
           availableLoras={availableLoras}
           availableUnets={availableUnets}
           availableClips={availableClips}
