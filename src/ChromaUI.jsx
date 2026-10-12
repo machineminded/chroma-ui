@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as api from "./api/comfyApi";
 import { tools } from "./components/Toolbar";
-import { COMFYUI_DEFAULT, CANVAS_SIZES, DEFAULT_CANVAS_INDEX, DEFAULTS } from "./constants";
+import { COMFYUI_DEFAULT, CANVAS_SIZES, DEFAULT_CANVAS_INDEX, DEFAULTS, KREA2_DEFAULTS } from "./constants";
 import { MODEL_FAMILIES, DEFAULT_FAMILY_ID } from "./workflows";
 import { COLORS } from "./styles";
+import { DEFAULT_CROP, loadImageSize, renderCrop } from "./utils/crop";
 
 import MenuBar from "./components/MenuBar";
 import Toolbar from "./components/Toolbar";
@@ -11,6 +12,7 @@ import Canvas from "./components/Canvas";
 import PromptBar from "./components/PromptBar";
 import ConfigPanel from "./components/ConfigPanel";
 import StatusBar from "./components/StatusBar";
+import CropEditor from "./components/CropEditor";
 
 export default function ChromaUI() {
   // ---- Connection ----
@@ -82,12 +84,22 @@ export default function ChromaUI() {
   const [contextImageUrl, setContextImageUrl] = useState(null);
   const maskCanvasRef = useRef(null);
   const abortControllerRef = useRef(null);
+  // Stable per-tab client ID so ComfyUI's WebSocket progress messages can be
+  // correlated with prompts this app queues (see openProgressSocket).
+  const clientIdRef = useRef(crypto.randomUUID());
 
   // ---- Upscale ----
   const [upscaleBy, setUpscaleBy] = useState(DEFAULTS.upscaleBy);
   const [upscaleTileWidth, setUpscaleTileWidth] = useState(DEFAULTS.upscaleTileWidth);
   const [upscaleTileHeight, setUpscaleTileHeight] = useState(DEFAULTS.upscaleTileHeight);
   const [upscaleDenoise, setUpscaleDenoise] = useState(DEFAULTS.upscaleDenoise);
+
+  // ---- Img2Img (families with supportsImg2Img) ----
+  const [img2imgEnabled, setImg2imgEnabled] = useState(false);
+  const [img2imgDenoise, setImg2imgDenoise] = useState(KREA2_DEFAULTS.img2imgDenoise);
+  const [img2imgSource, setImg2imgSource] = useState(null); // { url, w, h, name }
+  const [img2imgCrop, setImg2imgCrop] = useState(DEFAULT_CROP);
+  const [cropEditorOpen, setCropEditorOpen] = useState(false);
 
   // ---- Styles ----
   const [selectedStyle, setSelectedStyle] = useState(null);
@@ -145,6 +157,7 @@ export default function ChromaUI() {
     if (d.betaBeta !== undefined) setBetaBeta(d.betaBeta);
     setInpaintDenoise(d.inpaintDenoise);
     setInpaintContextExtend(d.inpaintContextExtend);
+    if (d.img2imgDenoise !== undefined) setImg2imgDenoise(d.img2imgDenoise);
     setGenSize(family.canvasSizes[family.defaultCanvasIndex]);
   }, [modelFamilyId]);
 
@@ -328,7 +341,42 @@ export default function ChromaUI() {
   }, [serverUrl, currentImage, canvasSize]);
 
   // ===========================================================================
-  // Generate (txt2img, inpaint, or upscale depending on mode)
+  // Img2Img source — from a local file or the current canvas image. The crop
+  // resets and the crop editor opens so the user can frame it right away.
+  // ===========================================================================
+  const setImg2imgSourceFromUrl = useCallback(async (url, name) => {
+    try {
+      const size = await loadImageSize(url);
+      setImg2imgSource((prev) => {
+        if (prev?.url.startsWith("blob:") && prev.url !== url) URL.revokeObjectURL(prev.url);
+        return { url, name, ...size };
+      });
+      setImg2imgCrop(DEFAULT_CROP);
+      setImg2imgEnabled(true);
+      setCropEditorOpen(true);
+    } catch (err) {
+      setStatusMsg(`Img2Img: ${err.message}`);
+    }
+  }, []);
+
+  const handleImg2imgLoadFile = useCallback((file) => {
+    if (file) setImg2imgSourceFromUrl(URL.createObjectURL(file), file.name);
+  }, [setImg2imgSourceFromUrl]);
+
+  const handleImg2imgUseCanvas = useCallback(() => {
+    if (currentImage) setImg2imgSourceFromUrl(currentImage, currentImageFilename || "canvas");
+  }, [currentImage, currentImageFilename, setImg2imgSourceFromUrl]);
+
+  const handleImg2imgClear = useCallback(() => {
+    setImg2imgSource((prev) => {
+      if (prev?.url.startsWith("blob:")) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+    setImg2imgEnabled(false);
+  }, []);
+
+  // ===========================================================================
+  // Generate (txt2img, img2img, inpaint, or upscale depending on mode)
   // ===========================================================================
   const handleGenerate = useCallback(async () => {
     if (!connected) { setStatusMsg("Not connected to ComfyUI"); return; }
@@ -393,7 +441,18 @@ export default function ChromaUI() {
           contextOnly: false,
         });
       } else {
-        // ---- TXT2IMG ----
+        // ---- TXT2IMG / IMG2IMG ----
+        // Img2img reuses the txt2img graph with the empty latent swapped for the
+        // encoded source, cropped/scaled client-side to exactly genSize.
+        let initImageName;
+        if (family.supportsImg2Img && img2imgEnabled) {
+          if (!img2imgSource) throw new Error("Img2Img is on but no source image is loaded");
+          genType = "img2img";
+          setStatusMsg("Uploading img2img source...");
+          const blob = await renderCrop(img2imgSource, img2imgCrop, genSize.w, genSize.h);
+          initImageName = (await api.uploadImage(serverUrl, blob, "chroma_img2img_source.png")).fullName;
+        }
+
         setStatusMsg("Generating...");
         workflow = family.buildTxt2Img({
           positive: effectivePositive, negative,
@@ -402,13 +461,35 @@ export default function ChromaUI() {
           unetName, clipName, vaeName,
           loras: loras.slice(0, family.loraSlots),
           betaAlpha, betaBeta,
+          initImageName, denoise: img2imgDenoise,
         });
       }
 
-      const { prompt_id } = await api.queuePrompt(serverUrl, workflow);
-      const outputs = await api.pollForCompletion(serverUrl, prompt_id, {
-        steps, onProgress: setProgress, signal: abortControllerRef.current.signal,
+      const { prompt_id } = await api.queuePrompt(serverUrl, workflow, clientIdRef.current);
+
+      // Real per-step progress from ComfyUI's WebSocket, when available — the
+      // time-based estimate below stays as a fallback until (or unless) it
+      // delivers a real value.
+      let wsHasData = false;
+      const closeProgressSocket = api.openProgressSocket(serverUrl, {
+        clientId: clientIdRef.current,
+        promptId: prompt_id,
+        onProgress: (value, max) => {
+          wsHasData = true;
+          setProgress(Math.min(99, (value / max) * 100));
+        },
       });
+
+      let outputs;
+      try {
+        outputs = await api.pollForCompletion(serverUrl, prompt_id, {
+          steps,
+          onProgress: (pct) => { if (!wsHasData) setProgress(pct); },
+          signal: abortControllerRef.current.signal,
+        });
+      } finally {
+        closeProgressSocket();
+      }
 
       console.log("[Chroma] Generation outputs:", JSON.stringify(Object.keys(outputs)));
       for (const [nodeId, out] of Object.entries(outputs)) {
@@ -455,6 +536,7 @@ export default function ChromaUI() {
     family, loras,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
     upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
+    img2imgEnabled, img2imgSource, img2imgCrop, img2imgDenoise,
     uploadCanvasAndMask, uploadCurrentImage,
   ]);
 
@@ -527,10 +609,29 @@ export default function ChromaUI() {
           generatedImages={generatedImages} currentImage={currentImage}
           setCurrentImage={(url, filename) => { setCurrentImage(url); setCurrentImageFilename(filename ?? null); }}
           contextImageUrl={contextImageUrl}
+          img2img={{
+            enabled: img2imgEnabled, setEnabled: setImg2imgEnabled,
+            denoise: img2imgDenoise, setDenoise: setImg2imgDenoise,
+            source: img2imgSource, crop: img2imgCrop,
+            canUseCanvas: !!currentImage,
+            onLoadFile: handleImg2imgLoadFile,
+            onUseCanvas: handleImg2imgUseCanvas,
+            onClear: handleImg2imgClear,
+            onEditCrop: () => setCropEditorOpen(true),
+          }}
         />
       </div>
 
       <StatusBar statusMsg={statusMsg} canvasSize={canvasSize} activeTool={activeTool} zoom={zoom} />
+
+      {cropEditorOpen && img2imgSource && (
+        <CropEditor
+          source={img2imgSource} crop={img2imgCrop}
+          targetW={genSize.w} targetH={genSize.h}
+          onChange={setImg2imgCrop}
+          onClose={() => setCropEditorOpen(false)}
+        />
+      )}
     </div>
   );
 }

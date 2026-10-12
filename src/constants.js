@@ -66,5 +66,6 @@ export const KREA2_DEFAULTS = {
   vaeName: "wan_2.1_vae.safetensors",
   inpaintDenoise: 0.35,
   inpaintContextExtend: 2.0,
+  img2imgDenoise: 0.75,
   brushSize: 40,
 };

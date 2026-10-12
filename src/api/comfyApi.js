@@ -1,13 +1,69 @@
 // ComfyUI API layer — all communication with the ComfyUI backend
+import { buildUiWorkflow } from "./workflowMetadata";
 
-export async function queuePrompt(serverUrl, workflow) {
+export async function queuePrompt(serverUrl, workflow, clientId) {
+  const body = clientId ? { prompt: workflow, client_id: clientId } : { prompt: workflow };
+
+  // Embed a UI-format workflow so saved PNGs can be dragged back into ComfyUI.
+  // Best-effort: metadata must never block generation.
+  try {
+    const uiWorkflow = await buildUiWorkflow(serverUrl, workflow);
+    if (uiWorkflow) body.extra_data = { extra_pnginfo: { workflow: uiWorkflow } };
+    else console.warn("[Chroma] Couldn't build UI workflow metadata — PNG will only contain the API prompt");
+  } catch (err) {
+    console.warn("[Chroma] Workflow metadata failed:", err);
+  }
+
   const res = await fetch(`${serverUrl}/prompt`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: workflow }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`ComfyUI error: ${res.status}`);
   return res.json();
+}
+
+/**
+ * Open a WebSocket to ComfyUI and report real sampler progress for a given
+ * prompt, so the UI's progress bar can track the same per-step callback that
+ * drives ComfyUI's own console progress bar (instead of guessing from elapsed
+ * time). Best-effort: any failure to connect is swallowed and results in a
+ * no-op close() so callers never need to check availability — the caller's
+ * own time-based estimate remains the fallback if no message ever arrives.
+ *
+ * Handles both current ComfyUI's "progress_state" (per-node dict) and the
+ * older "progress" (single value/max) message shapes, since the exact
+ * message format has changed across ComfyUI versions.
+ */
+export function openProgressSocket(serverUrl, { clientId, promptId, onProgress }) {
+  try {
+    const wsUrl = `${serverUrl.replace(/^http/, "ws")}/ws?clientId=${encodeURIComponent(clientId)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (event) => {
+      if (typeof event.data !== "string") return; // binary preview-image frame — ignore
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (msg.type === "progress" && msg.data?.prompt_id === promptId) {
+        onProgress?.(msg.data.value, msg.data.max);
+      } else if (msg.type === "progress_state" && msg.data?.prompt_id === promptId) {
+        const running = Object.values(msg.data.nodes || {}).find(
+          (n) => n.state === "running" || n.value < n.max
+        );
+        if (running) onProgress?.(running.value, running.max);
+      }
+    };
+    ws.onerror = () => {}; // swallow — fallback estimate covers this
+
+    return () => ws.close();
+  } catch {
+    return () => {};
+  }
 }
 
 export async function getHistory(serverUrl, promptId) {

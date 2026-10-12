@@ -177,6 +177,7 @@ function buildInpaintWorkflow({
       class_type: "InpaintCropImproved",
       inputs: {
         downscale_algorithm: "bilinear", upscale_algorithm: "bicubic",
+        device_mode: "gpu (much faster)",
         preresize: false, preresize_mode: "ensure minimum resolution",
         preresize_min_width: 1024, preresize_min_height: 1024,
         preresize_max_width: 16384, preresize_max_height: 16384,

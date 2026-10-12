@@ -17,13 +17,42 @@ function julianDayNumber() {
 /**
  * Build txt2img workflow. Krea2's graph has no flow-shift node — the (possibly
  * LoRA-chained) UNET model feeds directly into KSampler.
+ *
+ * Pass `initImageName` to turn it into img2img (per the reference export
+ * "krea2 int8 convrot img2img.json"): the EmptySD3LatentImage is swapped for
+ * LoadImage → VAEEncode, and KSampler runs at `denoise` instead of 1. The
+ * uploaded image must already be width × height — cropping/scaling happens
+ * client-side (see utils/crop.js).
  */
 function buildTxt2ImgWorkflow({
   positive, negative, width, height, seed, steps, cfg,
   unetName, clipName, vaeName,
   loras,
+  initImageName, denoise,
 }) {
   const { topModelRef, nodes: loraNodes } = buildLoraChain(loras, "731");
+  const isImg2Img = !!initImageName;
+
+  const latentNodes = isImg2Img
+    ? {
+        "741": {
+          class_type: "LoadImage",
+          inputs: { image: initImageName },
+          _meta: { title: "Load Image (img2img source)" },
+        },
+        "737": {
+          class_type: "VAEEncode",
+          inputs: { pixels: ["741", 0], vae: ["710", 0] },
+          _meta: { title: "VAE Encode" },
+        },
+      }
+    : {
+        "737": {
+          class_type: "EmptySD3LatentImage",
+          inputs: { width, height, batch_size: 1 },
+          _meta: { title: "EmptySD3LatentImage" },
+        },
+      };
 
   return {
     "710": {
@@ -41,11 +70,7 @@ function buildTxt2ImgWorkflow({
       inputs: { clip_name: clipName || "qwen3vl_4b_fp8_scaled.safetensors", type: "krea2", device: "default" },
       _meta: { title: "Load CLIP" },
     },
-    "737": {
-      class_type: "EmptySD3LatentImage",
-      inputs: { width, height, batch_size: 1 },
-      _meta: { title: "EmptySD3LatentImage" },
-    },
+    ...latentNodes,
     "748": {
       class_type: "CLIPTextEncode",
       inputs: { text: positive || "", clip: ["733", 0] },
@@ -60,7 +85,8 @@ function buildTxt2ImgWorkflow({
       class_type: "KSampler",
       inputs: {
         seed, steps: steps || 8, cfg: cfg || 1,
-        sampler_name: "er_sde", scheduler: "simple", denoise: 1,
+        sampler_name: "er_sde", scheduler: "simple",
+        denoise: isImg2Img ? (denoise ?? 0.75) : 1,
         model: topModelRef,
         positive: ["748", 0], negative: ["749", 0], latent_image: ["737", 0],
       },
@@ -145,6 +171,7 @@ function buildInpaintWorkflow({
       class_type: "InpaintCropImproved",
       inputs: {
         downscale_algorithm: "bilinear", upscale_algorithm: "bicubic",
+        device_mode: "gpu (much faster)",
         preresize: false, preresize_mode: "ensure minimum resolution",
         preresize_min_width: 1024, preresize_min_height: 1024,
         preresize_max_width: 16384, preresize_max_height: 16384,
@@ -218,11 +245,12 @@ const krea2 = {
   label: "Krea2",
   loraSlots: 6,
   supportsUpscale: false,
+  supportsImg2Img: true,
   canvasSizes: KREA2_CANVAS_SIZES,
   defaultCanvasIndex: KREA2_DEFAULT_CANVAS_INDEX,
   defaults: KREA2_DEFAULTS,
   outputNodes: {
-    txt2img: { node: "740" },
+    txt2img: { node: "740" }, // img2img reuses the txt2img graph and output node
     inpaint: { node: "7", contextNode: "38", skip: ["38"] },
   },
   buildTxt2Img: buildTxt2ImgWorkflow,

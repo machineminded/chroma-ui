@@ -3,6 +3,7 @@ import Icons from "./Icons";
 import { COLORS, labelStyle, inputStyle, sliderStyle, valStyle, dividerStyle, sectionHeaderStyle, selectStyle } from "../styles";
 import { MODEL_FAMILIES } from "../workflows";
 import StylesPanel from "./StylesPanel";
+import { CropPreview } from "./CropEditor";
 
 export default function ConfigPanel({
   // Tab state
@@ -28,6 +29,8 @@ export default function ConfigPanel({
   generatedImages, currentImage, setCurrentImage,
   // Inpaint context preview
   contextImageUrl,
+  // Img2Img
+  img2img,
 }) {
   const sideW = 260;
 
@@ -85,6 +88,7 @@ export default function ConfigPanel({
             betaAlpha={betaAlpha} setBetaAlpha={setBetaAlpha}
             betaBeta={betaBeta} setBetaBeta={setBetaBeta}
             seed={seed} setSeed={setSeed}
+            img2img={img2img}
           />
         )}
 
@@ -116,6 +120,7 @@ function ConfigTab({
   steps, setSteps, cfg, setCfg, shift, setShift,
   betaAlpha, setBetaAlpha, betaBeta, setBetaBeta,
   seed, setSeed,
+  img2img,
 }) {
   const isChroma = family.id === "chroma";
 
@@ -199,6 +204,8 @@ function ConfigTab({
         </select>
       </div>
 
+      {family.supportsImg2Img && <Img2ImgSection img2img={img2img} genSize={genSize} />}
+
       <SliderRow label="Steps" value={steps} onChange={setSteps} min={1} max={80} step={1} />
       <SliderRow label="CFG" value={cfg} onChange={setCfg} min={0} max={20} step={0.5} decimals={1} />
       {isChroma && (
@@ -220,6 +227,63 @@ function ConfigTab({
         <input type="number" value={seed} onChange={(e) => setSeed(Number(e.target.value))}
           style={{ ...inputStyle, width: "100%", marginTop: 4, boxSizing: "border-box" }} />
       </div>
+    </div>
+  );
+}
+
+// ---------- Img2Img: source image, crop preview, denoise ----------
+function Img2ImgSection({ img2img, genSize }) {
+  const { enabled, setEnabled, denoise, setDenoise, source, crop, canUseCanvas,
+    onLoadFile, onUseCanvas, onClear, onEditCrop } = img2img;
+  const fileInputRef = useRef(null);
+
+  const smallButton = (disabled) => ({
+    flex: 1, background: COLORS.border, border: "none", borderRadius: 4,
+    color: disabled ? COLORS.textDimmest : "#aaa", padding: "4px 6px",
+    cursor: disabled ? "not-allowed" : "pointer", fontSize: 10, fontFamily: "inherit",
+  });
+
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: 8, padding: 8, borderRadius: 6,
+      border: `1px solid ${enabled ? "#a78bfa44" : COLORS.border}`,
+      background: enabled ? "#a78bfa0a" : "transparent",
+    }}>
+      <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+        <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)}
+          style={{ accentColor: COLORS.accent, margin: 0 }} />
+        Image to Image
+      </label>
+
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }}
+        onChange={(e) => { onLoadFile(e.target.files?.[0]); e.target.value = ""; }} />
+      <div style={{ display: "flex", gap: 4 }}>
+        <button onClick={() => fileInputRef.current?.click()} style={smallButton(false)}>Load File…</button>
+        <button onClick={onUseCanvas} disabled={!canUseCanvas} style={smallButton(!canUseCanvas)}
+          title={canUseCanvas ? "Use the image currently on the canvas" : "No image on the canvas"}>
+          Use Canvas
+        </button>
+      </div>
+
+      {source && (
+        <>
+          <CropPreview source={source} crop={crop} targetW={genSize.w} targetH={genSize.h}
+            width={218} onClick={onEditCrop} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 9, color: COLORS.textDimmer, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {source.w} × {source.h} → {genSize.w} × {genSize.h}
+            </span>
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              <button onClick={onEditCrop} style={{ ...smallButton(false), flex: "none" }}>Crop…</button>
+              <button onClick={onClear} style={{ ...smallButton(false), flex: "none", color: COLORS.danger }}>Remove</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {enabled && (
+        <SliderRow label="Denoise" value={denoise} onChange={setDenoise} min={0} max={1} step={0.01} decimals={2} />
+      )}
     </div>
   );
 }
@@ -282,7 +346,7 @@ function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextIma
               {img.prompt}
             </div>
             <div style={{ fontSize: 9, color: COLORS.textDimmest, marginTop: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>{img.type === "inpaint" ? "Inpaint" : img.type === "upscale" ? "Upscale" : "txt2img"} · Seed: {img.seed}</span>
+              <span>{img.type === "inpaint" ? "Inpaint" : img.type === "upscale" ? "Upscale" : img.type === "img2img" ? "img2img" : "txt2img"} · Seed: {img.seed}</span>
               {img.filename && (
                 <button
                   onClick={(e) => { e.stopPropagation(); downloadImage(img.url, img.filename); }}
@@ -354,15 +418,42 @@ function LoraSelect({ label, value, onChange, strength, onStrengthChange, loras 
       />
       {value && value !== "(none)" && (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, gap: 6 }}>
             <span style={{ fontSize: 10, color: COLORS.textDimmer }}>Strength</span>
-            <span style={valStyle}>{strength.toFixed(2)}</span>
+            <StrengthInput strength={strength} onStrengthChange={onStrengthChange} />
           </div>
           <input type="range" min={-4} max={4} step={0.05} value={strength}
             onChange={(e) => onStrengthChange(Number(e.target.value))} style={sliderStyle} />
         </>
       )}
     </div>
+  );
+}
+
+// ---------- LoRA strength text input (allows typing "-" / partial decimals) ----------
+function StrengthInput({ strength, onStrengthChange }) {
+  const [draft, setDraft] = useState(strength.toFixed(2));
+
+  useEffect(() => {
+    // Keep the field in sync when strength changes externally (e.g. via the slider)
+    if (parseFloat(draft) !== strength) setDraft(strength.toFixed(2));
+  }, [strength]);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      onChange={(e) => {
+        const raw = e.target.value;
+        if (!/^-?\d*\.?\d*$/.test(raw)) return;
+        setDraft(raw);
+        const v = parseFloat(raw);
+        if (!Number.isNaN(v)) onStrengthChange(Math.min(4, Math.max(-4, v)));
+      }}
+      onBlur={() => setDraft(strength.toFixed(2))}
+      style={{ ...inputStyle, width: 56, textAlign: "right", padding: "2px 4px" }}
+    />
   );
 }
 
