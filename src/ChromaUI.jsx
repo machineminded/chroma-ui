@@ -13,6 +13,32 @@ import PromptBar from "./components/PromptBar";
 import ConfigPanel from "./components/ConfigPanel";
 import StatusBar from "./components/StatusBar";
 import CropEditor from "./components/CropEditor";
+import { loadJSON, saveJSON } from "./utils/storage";
+
+const PROMPT_TABS_KEY = "chroma-ui.promptTabs";
+const PROMPT_HISTORY_KEY = "chroma-ui.promptHistory";
+const PROMPT_HISTORY_LIMIT = 200; // unstarred entries; starred ones are always kept
+
+function newPromptTab(existingTabs = []) {
+  const used = new Set(existingTabs.map((t) => t.name));
+  let n = existingTabs.length + 1;
+  while (used.has(`Prompt ${n}`)) n++;
+  return { id: crypto.randomUUID(), name: `Prompt ${n}`, positive: "", negative: "", style: null };
+}
+
+function loadPromptTabs() {
+  const saved = loadJSON(PROMPT_TABS_KEY, null);
+  if (Array.isArray(saved?.tabs) && saved.tabs.length > 0) {
+    const tabs = saved.tabs.map((t) => ({ ...newPromptTab(), ...t }));
+    return { tabs, activeId: tabs.some((t) => t.id === saved.activeId) ? saved.activeId : tabs[0].id };
+  }
+  const tab = newPromptTab();
+  return { tabs: [tab], activeId: tab.id };
+}
+
+const promptKey = ({ positive, negative, style }) => JSON.stringify([positive, negative ?? "", style?.name ?? null]);
+
+const tabToJob = (t) => ({ positive: t.positive, negative: t.negative, style: t.style, tabName: t.name });
 
 export default function ChromaUI() {
   // ---- Connection ----
@@ -23,9 +49,73 @@ export default function ChromaUI() {
   // ---- Tools ----
   const [activeTool, setActiveTool] = useState("pointer");
 
-  // ---- Prompts ----
-  const [positive, setPositive] = useState("");
-  const [negative, setNegative] = useState("");
+  // ---- Prompt tabs (each holds its own prompts + style; workflow settings are shared) ----
+  const [promptTabState, setPromptTabState] = useState(loadPromptTabs);
+  const { tabs: promptTabs, activeId: activePromptTabId } = promptTabState;
+  const activePromptTab = promptTabs.find((t) => t.id === activePromptTabId) ?? promptTabs[0];
+  useEffect(() => { saveJSON(PROMPT_TABS_KEY, promptTabState); }, [promptTabState]);
+
+  const updatePromptTab = useCallback((id, patch) => {
+    setPromptTabState((s) => ({ ...s, tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
+  }, []);
+  const addPromptTab = useCallback((init = {}) => {
+    setPromptTabState((s) => {
+      const tab = { ...newPromptTab(s.tabs), ...init };
+      return { tabs: [...s.tabs, tab], activeId: tab.id };
+    });
+  }, []);
+  const closePromptTab = useCallback((id) => {
+    setPromptTabState((s) => {
+      if (s.tabs.length <= 1) return s;
+      const idx = s.tabs.findIndex((t) => t.id === id);
+      const tabs = s.tabs.filter((t) => t.id !== id);
+      const activeId = s.activeId === id ? tabs[Math.min(idx, tabs.length - 1)].id : s.activeId;
+      return { tabs, activeId };
+    });
+  }, []);
+  const selectPromptTab = useCallback((id) => setPromptTabState((s) => ({ ...s, activeId: id })), []);
+
+  // The rest of the app reads/writes the active tab through these
+  const positive = activePromptTab.positive;
+  const negative = activePromptTab.negative;
+  const selectedStyle = activePromptTab.style;
+  const setPositive = useCallback((v) => updatePromptTab(activePromptTab.id, { positive: v }), [activePromptTab.id, updatePromptTab]);
+  const setNegative = useCallback((v) => updatePromptTab(activePromptTab.id, { negative: v }), [activePromptTab.id, updatePromptTab]);
+  const setSelectedStyle = useCallback(
+    (style) => updatePromptTab(activePromptTab.id, { style: style ? { name: style.name, prompt: style.prompt } : null }),
+    [activePromptTab.id, updatePromptTab]
+  );
+
+  // ---- Prompt history (every prompt generated with; persisted) ----
+  const [promptHistory, setPromptHistory] = useState(() => loadJSON(PROMPT_HISTORY_KEY, []));
+  useEffect(() => { saveJSON(PROMPT_HISTORY_KEY, promptHistory); }, [promptHistory]);
+
+  // An identical prompt (positive + negative + style) moves to the top instead of
+  // duplicating; unstarred entries beyond the cap fall off the end.
+  const recordPromptHistory = useCallback(({ positive, negative, style }) => {
+    setPromptHistory((prev) => {
+      const key = promptKey({ positive, negative, style });
+      const existing = prev.find((h) => promptKey(h) === key);
+      const entry = { id: existing?.id ?? crypto.randomUUID(), positive, negative, style, timestamp: Date.now(), starred: !!existing?.starred };
+      const rest = prev.filter((h) => h !== existing);
+      let unstarred = 0;
+      return [entry, ...rest].filter((h) => h.starred || ++unstarred <= PROMPT_HISTORY_LIMIT);
+    });
+  }, []);
+  const toggleHistoryStar = useCallback((id) => {
+    setPromptHistory((prev) => prev.map((h) => (h.id === id ? { ...h, starred: !h.starred } : h)));
+  }, []);
+  const deleteHistoryEntry = useCallback((id) => {
+    setPromptHistory((prev) => prev.filter((h) => h.id !== id));
+  }, []);
+
+  // Load a saved prompt (history entry or a generated image's prompt) into the active tab
+  const loadPromptIntoTab = useCallback(({ positive, negative, style }) => {
+    updatePromptTab(activePromptTab.id, { positive: positive ?? "", negative: negative ?? "", style: style ?? null });
+  }, [activePromptTab.id, updatePromptTab]);
+  const openPromptInNewTab = useCallback(({ positive, negative, style }) => {
+    addPromptTab({ positive: positive ?? "", negative: negative ?? "", style: style ?? null });
+  }, [addPromptTab]);
 
   // ---- Canvas ----
   const [canvasSize, setCanvasSize] = useState(CANVAS_SIZES[DEFAULT_CANVAS_INDEX]);
@@ -100,9 +190,6 @@ export default function ChromaUI() {
   const [img2imgSource, setImg2imgSource] = useState(null); // { url, w, h, name }
   const [img2imgCrop, setImg2imgCrop] = useState(DEFAULT_CROP);
   const [cropEditorOpen, setCropEditorOpen] = useState(false);
-
-  // ---- Styles ----
-  const [selectedStyle, setSelectedStyle] = useState(null);
 
   // ---- Panel ----
   const [activeTab, setActiveTab] = useState("Config");
@@ -378,9 +465,153 @@ export default function ChromaUI() {
   // ===========================================================================
   // Generate (txt2img, img2img, inpaint, or upscale depending on mode)
   // ===========================================================================
-  const handleGenerate = useCallback(async () => {
+  // runGeneration does ONE generation for one prompt using the current workflow
+  // settings; it throws on failure. runJobs wraps it with validation, the
+  // generating/cancel state, and prompt-history recording, for 1..N prompts.
+  const runGeneration = useCallback(async ({ positive, negative, style, tabName }, statusPrefix = "") => {
+    const status = (msg) => setStatusMsg(statusPrefix + msg);
+    const isUpscale = activeTool === "upscale";
+    setProgress(0);
+    status("Queueing prompt...");
+
+    const effectivePositive = style ? `${positive}, ${style.prompt}` : positive;
+    const actualSeed = seed === -1 ? Math.floor(Math.random() * 2 ** 32) : seed;
+    let workflow;
+    let isInpaint = false;
+    let genType = "txt2img";
+
+    if (isUpscale) {
+      // ---- UPSCALE ----
+      genType = "upscale";
+      status("Uploading image for upscale...");
+      const imageName = await uploadCurrentImage();
+
+      status("Upscaling...");
+      workflow = family.buildUpscale({
+        imageName, positive: effectivePositive, negative,
+        seed: actualSeed, steps, cfg, shift,
+        denoise: upscaleDenoise,
+        unetName, clipName, vaeName,
+        loras: loras.slice(0, family.loraSlots),
+        upscaleBy, tileWidth: upscaleTileWidth, tileHeight: upscaleTileHeight,
+        upscaleModelName: DEFAULTS.upscaleModelName,
+      });
+    } else if (activeTool === "inpaint" && hasMask && currentImage) {
+      // ---- INPAINT ----
+      isInpaint = true;
+      genType = "inpaint";
+      status("Uploading image + mask...");
+      const { imageName, maskName } = await uploadCanvasAndMask();
+
+      status("Generating inpaint...");
+      workflow = family.buildInpaint({
+        imageName, maskName, positive: effectivePositive, negative,
+        seed: actualSeed, steps, cfg,
+        denoise: inpaintDenoise,
+        shift: DEFAULTS.inpaintShift,
+        unetName, clipName, vaeName,
+        loras: loras.slice(0, family.loraSlots),
+        contextExtendFactor: inpaintContextExtend,
+        outputWidth: canvasSize.w,
+        outputHeight: canvasSize.h,
+        contextOnly: false,
+      });
+    } else {
+      // ---- TXT2IMG / IMG2IMG ----
+      // Img2img reuses the txt2img graph with the empty latent swapped for the
+      // encoded source, cropped/scaled client-side to exactly genSize.
+      let initImageName;
+      if (family.supportsImg2Img && img2imgEnabled) {
+        if (!img2imgSource) throw new Error("Img2Img is on but no source image is loaded");
+        genType = "img2img";
+        status("Uploading img2img source...");
+        const blob = await renderCrop(img2imgSource, img2imgCrop, genSize.w, genSize.h);
+        initImageName = (await api.uploadImage(serverUrl, blob, "chroma_img2img_source.png")).fullName;
+      }
+
+      status("Generating...");
+      workflow = family.buildTxt2Img({
+        positive: effectivePositive, negative,
+        width: genSize.w, height: genSize.h,
+        seed: actualSeed, steps, cfg, shift,
+        unetName, clipName, vaeName,
+        loras: loras.slice(0, family.loraSlots),
+        betaAlpha, betaBeta,
+        initImageName, denoise: img2imgDenoise,
+      });
+    }
+
+    const { prompt_id } = await api.queuePrompt(serverUrl, workflow, clientIdRef.current);
+
+    // Real per-step progress from ComfyUI's WebSocket, when available — the
+    // time-based estimate below stays as a fallback until (or unless) it
+    // delivers a real value.
+    let wsHasData = false;
+    const closeProgressSocket = api.openProgressSocket(serverUrl, {
+      clientId: clientIdRef.current,
+      promptId: prompt_id,
+      onProgress: (value, max) => {
+        wsHasData = true;
+        setProgress(Math.min(99, (value / max) * 100));
+      },
+    });
+
+    let outputs;
+    try {
+      outputs = await api.pollForCompletion(serverUrl, prompt_id, {
+        steps,
+        onProgress: (pct) => { if (!wsHasData) setProgress(pct); },
+        signal: abortControllerRef.current.signal,
+      });
+    } finally {
+      closeProgressSocket();
+    }
+
+    console.log("[Chroma] Generation outputs:", JSON.stringify(Object.keys(outputs)));
+    for (const [nodeId, out] of Object.entries(outputs)) {
+      if (out.images) console.log(`[Chroma]   Node ${nodeId}: ${out.images.length} image(s) — ${out.images[0]?.filename}`);
+    }
+
+    // For inpaint, get the stitched result node, skipping the context preview node.
+    // For txt2img and upscale, get the family's txt2img output node.
+    const preferredNode = isInpaint ? family.outputNodes.inpaint.node : family.outputNodes.txt2img.node;
+    const skipNodes = isInpaint ? family.outputNodes.inpaint.skip : [];
+    const img = api.findOutputImage(outputs, preferredNode, skipNodes);
+    if (!img) throw new Error("No output image found");
+
+    const imageUrl = api.getImageUrl(serverUrl, img.filename, img.subfolder, img.type);
+    if (!isInpaint) {
+      // canvasSize will be synced by the currentImage useEffect
+      setCurrentImage(imageUrl);
+      setCurrentImageFilename(img.filename);
+    }
+    // Inpaint: result goes to history only — canvas image and mask are preserved
+    // so the user can re-run until satisfied, then pick a result from History.
+    setGeneratedImages((prev) => [
+      {
+        url: imageUrl, filename: img.filename, timestamp: Date.now(), seed: actualSeed, type: genType,
+        prompt: positive, negative, style, tabName,
+      },
+      ...prev,
+    ]);
+    if (isInpaint) setActiveTab("History");
+    return genType === "upscale" ? `Upscaled ${upscaleBy}×!` : "Done!";
+  }, [
+    seed, steps, cfg, shift, hasMask, currentImage,
+    activeTool, serverUrl, canvasSize, genSize, unetName, clipName, vaeName,
+    family, loras,
+    betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
+    upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
+    img2imgEnabled, img2imgSource, img2imgCrop, img2imgDenoise,
+    uploadCanvasAndMask, uploadCurrentImage,
+  ]);
+
+  // jobs: [{ positive, negative, style, tabName }] — run sequentially; Cancel
+  // stops the current one and skips the rest.
+  const runJobs = useCallback(async (jobs) => {
+    if (generating) return;
     if (!connected) { setStatusMsg("Not connected to ComfyUI"); return; }
-    if (!positive.trim()) { setStatusMsg("Enter a prompt first"); return; }
+    if (jobs.length === 0) { setStatusMsg("Enter a prompt first"); return; }
 
     const isUpscale = activeTool === "upscale";
     if (isUpscale && !currentImage) { setStatusMsg("Generate an image first before upscaling"); return; }
@@ -391,154 +622,30 @@ export default function ChromaUI() {
 
     abortControllerRef.current = new AbortController();
     setGenerating(true);
-    setProgress(0);
-    setStatusMsg("Queueing prompt...");
-
-    const effectivePositive = selectedStyle
-      ? `${positive}, ${selectedStyle.prompt}`
-      : positive;
-
     try {
-      const actualSeed = seed === -1 ? Math.floor(Math.random() * 2 ** 32) : seed;
-      let workflow;
-      let isInpaint = false;
-      let genType = "txt2img";
-
-      if (isUpscale) {
-        // ---- UPSCALE ----
-        genType = "upscale";
-        setStatusMsg("Uploading image for upscale...");
-        const imageName = await uploadCurrentImage();
-
-        setStatusMsg("Upscaling...");
-        workflow = family.buildUpscale({
-          imageName, positive: effectivePositive, negative,
-          seed: actualSeed, steps, cfg, shift,
-          denoise: upscaleDenoise,
-          unetName, clipName, vaeName,
-          loras: loras.slice(0, family.loraSlots),
-          upscaleBy, tileWidth: upscaleTileWidth, tileHeight: upscaleTileHeight,
-          upscaleModelName: DEFAULTS.upscaleModelName,
-        });
-      } else if (activeTool === "inpaint" && hasMask && currentImage) {
-        // ---- INPAINT ----
-        isInpaint = true;
-        genType = "inpaint";
-        setStatusMsg("Uploading image + mask...");
-        const { imageName, maskName } = await uploadCanvasAndMask();
-
-        setStatusMsg("Generating inpaint...");
-        workflow = family.buildInpaint({
-          imageName, maskName, positive: effectivePositive, negative,
-          seed: actualSeed, steps, cfg,
-          denoise: inpaintDenoise,
-          shift: DEFAULTS.inpaintShift,
-          unetName, clipName, vaeName,
-          loras: loras.slice(0, family.loraSlots),
-          contextExtendFactor: inpaintContextExtend,
-          outputWidth: canvasSize.w,
-          outputHeight: canvasSize.h,
-          contextOnly: false,
-        });
-      } else {
-        // ---- TXT2IMG / IMG2IMG ----
-        // Img2img reuses the txt2img graph with the empty latent swapped for the
-        // encoded source, cropped/scaled client-side to exactly genSize.
-        let initImageName;
-        if (family.supportsImg2Img && img2imgEnabled) {
-          if (!img2imgSource) throw new Error("Img2Img is on but no source image is loaded");
-          genType = "img2img";
-          setStatusMsg("Uploading img2img source...");
-          const blob = await renderCrop(img2imgSource, img2imgCrop, genSize.w, genSize.h);
-          initImageName = (await api.uploadImage(serverUrl, blob, "chroma_img2img_source.png")).fullName;
-        }
-
-        setStatusMsg("Generating...");
-        workflow = family.buildTxt2Img({
-          positive: effectivePositive, negative,
-          width: genSize.w, height: genSize.h,
-          seed: actualSeed, steps, cfg, shift,
-          unetName, clipName, vaeName,
-          loras: loras.slice(0, family.loraSlots),
-          betaAlpha, betaBeta,
-          initImageName, denoise: img2imgDenoise,
-        });
+      let lastMsg = "";
+      for (let i = 0; i < jobs.length; i++) {
+        if (abortControllerRef.current.signal.aborted) throw new DOMException("Cancelled", "AbortError");
+        const job = jobs[i];
+        recordPromptHistory(job);
+        const prefix = jobs.length > 1 ? `[${i + 1}/${jobs.length}] ${job.tabName} — ` : "";
+        lastMsg = await runGeneration(job, prefix);
       }
-
-      const { prompt_id } = await api.queuePrompt(serverUrl, workflow, clientIdRef.current);
-
-      // Real per-step progress from ComfyUI's WebSocket, when available — the
-      // time-based estimate below stays as a fallback until (or unless) it
-      // delivers a real value.
-      let wsHasData = false;
-      const closeProgressSocket = api.openProgressSocket(serverUrl, {
-        clientId: clientIdRef.current,
-        promptId: prompt_id,
-        onProgress: (value, max) => {
-          wsHasData = true;
-          setProgress(Math.min(99, (value / max) * 100));
-        },
-      });
-
-      let outputs;
-      try {
-        outputs = await api.pollForCompletion(serverUrl, prompt_id, {
-          steps,
-          onProgress: (pct) => { if (!wsHasData) setProgress(pct); },
-          signal: abortControllerRef.current.signal,
-        });
-      } finally {
-        closeProgressSocket();
-      }
-
-      console.log("[Chroma] Generation outputs:", JSON.stringify(Object.keys(outputs)));
-      for (const [nodeId, out] of Object.entries(outputs)) {
-        if (out.images) console.log(`[Chroma]   Node ${nodeId}: ${out.images.length} image(s) — ${out.images[0]?.filename}`);
-      }
-
-      // For inpaint, get the stitched result node, skipping the context preview node.
-      // For txt2img and upscale, get the family's txt2img output node.
-      const preferredNode = isInpaint ? family.outputNodes.inpaint.node : family.outputNodes.txt2img.node;
-      const skipNodes = isInpaint ? family.outputNodes.inpaint.skip : [];
-      const img = api.findOutputImage(outputs, preferredNode, skipNodes);
-
-      if (img) {
-        const imageUrl = api.getImageUrl(serverUrl, img.filename, img.subfolder, img.type);
-        if (isUpscale) {
-          setCurrentImage(imageUrl); // canvasSize will be synced by the currentImage useEffect
-          setCurrentImageFilename(img.filename);
-        } else if (!isInpaint) {
-          setCurrentImage(imageUrl);
-          setCurrentImageFilename(img.filename);
-        }
-        // Inpaint: result goes to history only — canvas image and mask are preserved
-        // so the user can re-run until satisfied, then pick a result from History.
-        setGeneratedImages((prev) => [
-          { url: imageUrl, filename: img.filename, prompt: positive, timestamp: Date.now(), seed: actualSeed, type: genType },
-          ...prev,
-        ]);
-        if (isInpaint) setActiveTab("History");
-        setStatusMsg(genType === "upscale" ? `Upscaled ${upscaleBy}×!` : "Done!");
-      } else {
-        setStatusMsg("No output image found");
-      }
+      setStatusMsg(jobs.length > 1 ? `Done — ${jobs.length} prompts generated` : lastMsg);
     } catch (err) {
-      if (err.name === "AbortError") {
-        setStatusMsg("Cancelled");
-      } else {
-        setStatusMsg(`Error: ${err.message}`);
-      }
+      setStatusMsg(err.name === "AbortError" ? "Cancelled" : `Error: ${err.message}`);
     }
     setGenerating(false);
-  }, [
-    connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
-    activeTool, serverUrl, canvasSize, genSize, unetName, clipName, vaeName,
-    family, loras,
-    betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
-    upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
-    img2imgEnabled, img2imgSource, img2imgCrop, img2imgDenoise,
-    uploadCanvasAndMask, uploadCurrentImage,
-  ]);
+  }, [generating, connected, activeTool, currentImage, family, runGeneration, recordPromptHistory]);
+
+  const handleGenerate = useCallback(() => {
+    runJobs(activePromptTab.positive.trim() ? [tabToJob(activePromptTab)] : []);
+  }, [runJobs, activePromptTab]);
+
+  // Upscale barely depends on the prompt, so Generate All is disabled there (see PromptBar)
+  const handleGenerateAll = useCallback(() => {
+    runJobs(promptTabs.filter((t) => t.positive.trim()).map(tabToJob));
+  }, [runJobs, promptTabs]);
 
   // ===========================================================================
   // Render
@@ -583,6 +690,13 @@ export default function ChromaUI() {
             onGenerate={handleGenerate} generating={generating}
             hasMask={hasMask} activeTool={activeTool}
             selectedStyle={selectedStyle}
+            promptTabs={promptTabs} activePromptTabId={activePromptTab.id}
+            onSelectTab={selectPromptTab} onAddTab={() => addPromptTab()} onCloseTab={closePromptTab}
+            onRenameTab={(id, name) => updatePromptTab(id, { name })}
+            onGenerateAll={handleGenerateAll}
+            promptHistory={promptHistory}
+            onLoadHistory={loadPromptIntoTab} onOpenHistoryInNewTab={openPromptInNewTab}
+            onToggleHistoryStar={toggleHistoryStar} onDeleteHistory={deleteHistoryEntry}
           />
         </div>
 
@@ -609,6 +723,7 @@ export default function ChromaUI() {
           generatedImages={generatedImages} currentImage={currentImage}
           setCurrentImage={(url, filename) => { setCurrentImage(url); setCurrentImageFilename(filename ?? null); }}
           contextImageUrl={contextImageUrl}
+          onUsePrompt={loadPromptIntoTab}
           img2img={{
             enabled: img2imgEnabled, setEnabled: setImg2imgEnabled,
             denoise: img2imgDenoise, setDenoise: setImg2imgDenoise,

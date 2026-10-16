@@ -29,6 +29,8 @@ export default function ConfigPanel({
   generatedImages, currentImage, setCurrentImage,
   // Inpaint context preview
   contextImageUrl,
+  // Reuse a generated image's prompt in the active prompt tab
+  onUsePrompt,
   // Img2Img
   img2img,
 }) {
@@ -102,6 +104,7 @@ export default function ConfigPanel({
             currentImage={currentImage}
             setCurrentImage={setCurrentImage}
             contextImageUrl={contextImageUrl}
+            onUsePrompt={onUsePrompt}
           />
         )}
       </div>
@@ -300,7 +303,7 @@ async function downloadImage(url, filename) {
   URL.revokeObjectURL(blobUrl);
 }
 
-function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextImageUrl }) {
+function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextImageUrl, onUsePrompt }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {/* Context image preview */}
@@ -346,19 +349,34 @@ function HistoryTab({ generatedImages, currentImage, setCurrentImage, contextIma
               {img.prompt}
             </div>
             <div style={{ fontSize: 9, color: COLORS.textDimmest, marginTop: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>{img.type === "inpaint" ? "Inpaint" : img.type === "upscale" ? "Upscale" : img.type === "img2img" ? "img2img" : "txt2img"} · Seed: {img.seed}</span>
-              {img.filename && (
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {img.tabName ? `${img.tabName} · ` : ""}
+                {img.type === "inpaint" ? "Inpaint" : img.type === "upscale" ? "Upscale" : img.type === "img2img" ? "img2img" : "txt2img"} · Seed: {img.seed}
+              </span>
+              <span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <button
-                  onClick={(e) => { e.stopPropagation(); downloadImage(img.url, img.filename); }}
-                  title={`Download ${img.filename}`}
+                  onClick={(e) => { e.stopPropagation(); onUsePrompt?.({ positive: img.prompt, negative: img.negative, style: img.style }); }}
+                  title="Use this prompt in the current prompt tab"
                   style={{
                     background: "transparent", border: "none", color: COLORS.textDimmer,
-                    cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center",
+                    cursor: "pointer", padding: "2px 4px", fontSize: 11, fontFamily: "inherit",
                   }}
                 >
-                  <Icons.Download />
+                  ↺
                 </button>
-              )}
+                {img.filename && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); downloadImage(img.url, img.filename); }}
+                    title={`Download ${img.filename}`}
+                    style={{
+                      background: "transparent", border: "none", color: COLORS.textDimmer,
+                      cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center",
+                    }}
+                  >
+                    <Icons.Download />
+                  </button>
+                )}
+              </span>
             </div>
           </div>
         ))
