@@ -14,7 +14,7 @@ const tools = [
 
 export { tools };
 
-export default function Toolbar({ activeTool, setActiveTool, onGenerate }) {
+export default function Toolbar({ activeTool, setActiveTool, onGenerate, disabledTools = [] }) {
   const toolbarW = 44;
 
   return (
@@ -31,25 +31,30 @@ export default function Toolbar({ activeTool, setActiveTool, onGenerate }) {
         flexShrink: 0,
       }}
     >
-      {tools.map((t) => (
-        <button
-          key={t.id}
-          title={t.label}
-          onClick={() => setActiveTool(t.id)}
-          style={{
-            width: 34, height: 34,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            border: "none", borderRadius: 4, cursor: "pointer",
-            background: activeTool === t.id ? "#a78bfa22" : "transparent",
-            color: activeTool === t.id ? COLORS.accent : "#777",
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={(e) => { if (activeTool !== t.id) e.currentTarget.style.background = "#ffffff08"; }}
-          onMouseLeave={(e) => { if (activeTool !== t.id) e.currentTarget.style.background = "transparent"; }}
-        >
-          <t.icon />
-        </button>
-      ))}
+      {tools.map((t) => {
+        const disabled = disabledTools.includes(t.id);
+        return (
+          <button
+            key={t.id}
+            title={disabled ? `${t.label} — not supported for this model` : t.label}
+            onClick={() => !disabled && setActiveTool(t.id)}
+            disabled={disabled}
+            style={{
+              width: 34, height: 34,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              border: "none", borderRadius: 4, cursor: disabled ? "not-allowed" : "pointer",
+              background: activeTool === t.id ? "#a78bfa22" : "transparent",
+              color: disabled ? "#444" : activeTool === t.id ? COLORS.accent : "#777",
+              opacity: disabled ? 0.5 : 1,
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { if (activeTool !== t.id && !disabled) e.currentTarget.style.background = "#ffffff08"; }}
+            onMouseLeave={(e) => { if (activeTool !== t.id && !disabled) e.currentTarget.style.background = "transparent"; }}
+          >
+            <t.icon />
+          </button>
+        );
+      })}
 
       <div style={{ height: 1, width: 24, background: COLORS.border, margin: "6px 0" }} />
 

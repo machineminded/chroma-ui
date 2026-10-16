@@ -106,6 +106,12 @@ const Icons = {
       <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   ),
+  Recenter: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  ),
   Styles: () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="10" />

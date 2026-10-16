@@ -355,22 +355,36 @@ export default function Canvas({
           backgroundSize: "24px 24px",
         }} />
 
-        {/* Download button */}
-        {currentImage && currentImageFilename && (
+        {/* Canvas action buttons (recenter, download) */}
+        <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10, display: "flex", gap: 6 }}>
           <button
-            onClick={() => downloadImage(currentImage, currentImageFilename)}
-            title={`Download ${currentImageFilename}`}
+            onClick={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }); }}
+            title="Re-center canvas (0)"
             style={{
-              position: "absolute", top: 10, right: 10, zIndex: 10,
               background: "rgba(0,0,0,0.55)", border: `1px solid ${COLORS.border}`,
               borderRadius: 6, color: COLORS.textDim, cursor: "pointer",
               padding: "5px 8px", display: "flex", alignItems: "center", gap: 5,
               fontSize: 10, fontFamily: "inherit", backdropFilter: "blur(4px)",
             }}
           >
-            <Icons.Download /> {currentImageFilename}
+            <Icons.Recenter />
           </button>
-        )}
+
+          {currentImage && currentImageFilename && (
+            <button
+              onClick={() => downloadImage(currentImage, currentImageFilename)}
+              title={`Download ${currentImageFilename}`}
+              style={{
+                background: "rgba(0,0,0,0.55)", border: `1px solid ${COLORS.border}`,
+                borderRadius: 6, color: COLORS.textDim, cursor: "pointer",
+                padding: "5px 8px", display: "flex", alignItems: "center", gap: 5,
+                fontSize: 10, fontFamily: "inherit", backdropFilter: "blur(4px)",
+              }}
+            >
+              <Icons.Download /> {currentImageFilename}
+            </button>
+          )}
+        </div>
 
         <div
           style={{

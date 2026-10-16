@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as api from "./api/comfyApi";
 import { tools } from "./components/Toolbar";
-import { COMFYUI_DEFAULT, CANVAS_SIZES, DEFAULT_CANVAS_INDEX, DEFAULTS } from "./constants";
+import { COMFYUI_DEFAULT, CANVAS_SIZES, DEFAULT_CANVAS_INDEX, DEFAULTS, KREA2_DEFAULTS } from "./constants";
+import { MODEL_FAMILIES, DEFAULT_FAMILY_ID } from "./workflows";
 import { COLORS } from "./styles";
+import { DEFAULT_CROP, loadImageSize, renderCrop } from "./utils/crop";
 
 import MenuBar from "./components/MenuBar";
 import Toolbar from "./components/Toolbar";
@@ -10,6 +12,7 @@ import Canvas from "./components/Canvas";
 import PromptBar from "./components/PromptBar";
 import ConfigPanel from "./components/ConfigPanel";
 import StatusBar from "./components/StatusBar";
+import CropEditor from "./components/CropEditor";
 
 export default function ChromaUI() {
   // ---- Connection ----
@@ -41,6 +44,10 @@ export default function ChromaUI() {
   const [generatedImages, setGeneratedImages] = useState([]);
   const [currentImage, setCurrentImage] = useState(null);
 
+  // ---- Model family (strategy pattern — Chroma vs. Krea2 workflow builders) ----
+  const [modelFamilyId, setModelFamilyId] = useState(DEFAULT_FAMILY_ID);
+  const family = MODEL_FAMILIES[modelFamilyId];
+
   // ---- Model config ----
   const [seed, setSeed] = useState(-1);
   const [steps, setSteps] = useState(DEFAULTS.steps);
@@ -53,10 +60,17 @@ export default function ChromaUI() {
   const [vaeName, setVaeName] = useState(DEFAULTS.vaeName);
 
   // ---- LoRA ----
-  const [lora1, setLora1] = useState("(none)");
-  const [lora1Strength, setLora1Strength] = useState(1.0);
-  const [lora2, setLora2] = useState("(none)");
-  const [lora2Strength, setLora2Strength] = useState(1.0);
+  // Always allocate the max slot count (6, for Krea2); each family only
+  // reads/shows the first `family.loraSlots` entries.
+  const [loras, setLoras] = useState(
+    Array.from({ length: 6 }, () => ({ name: "(none)", strength: 1.0 }))
+  );
+  const setLoraName = useCallback((i, name) => {
+    setLoras((prev) => prev.map((l, idx) => (idx === i ? { ...l, name } : l)));
+  }, []);
+  const setLoraStrength = useCallback((i, strength) => {
+    setLoras((prev) => prev.map((l, idx) => (idx === i ? { ...l, strength } : l)));
+  }, []);
   const [availableLoras, setAvailableLoras] = useState([]);
   const [availableUnets, setAvailableUnets] = useState([]);
   const [availableClips, setAvailableClips] = useState([]);
@@ -70,12 +84,22 @@ export default function ChromaUI() {
   const [contextImageUrl, setContextImageUrl] = useState(null);
   const maskCanvasRef = useRef(null);
   const abortControllerRef = useRef(null);
+  // Stable per-tab client ID so ComfyUI's WebSocket progress messages can be
+  // correlated with prompts this app queues (see openProgressSocket).
+  const clientIdRef = useRef(crypto.randomUUID());
 
   // ---- Upscale ----
   const [upscaleBy, setUpscaleBy] = useState(DEFAULTS.upscaleBy);
   const [upscaleTileWidth, setUpscaleTileWidth] = useState(DEFAULTS.upscaleTileWidth);
   const [upscaleTileHeight, setUpscaleTileHeight] = useState(DEFAULTS.upscaleTileHeight);
   const [upscaleDenoise, setUpscaleDenoise] = useState(DEFAULTS.upscaleDenoise);
+
+  // ---- Img2Img (families with supportsImg2Img) ----
+  const [img2imgEnabled, setImg2imgEnabled] = useState(false);
+  const [img2imgDenoise, setImg2imgDenoise] = useState(KREA2_DEFAULTS.img2imgDenoise);
+  const [img2imgSource, setImg2imgSource] = useState(null); // { url, w, h, name }
+  const [img2imgCrop, setImg2imgCrop] = useState(DEFAULT_CROP);
+  const [cropEditorOpen, setCropEditorOpen] = useState(false);
 
   // ---- Styles ----
   const [selectedStyle, setSelectedStyle] = useState(null);
@@ -92,16 +116,16 @@ export default function ChromaUI() {
       const res = await fetch(`${serverUrl}/system_stats`);
       if (res.ok) {
         setConnected(true);
-        const [loras, models] = await Promise.all([
+        const [loraList, models] = await Promise.all([
           api.fetchLoras(serverUrl),
           api.fetchModels(serverUrl),
         ]);
-        setAvailableLoras(loras);
+        setAvailableLoras(loraList);
         setAvailableUnets(models.unets);
         setAvailableClips(models.clips);
         setAvailableVaes(models.vaes);
-        setStatusMsg(loras.length > 0
-          ? `Connected — ${loras.length} LoRA${loras.length !== 1 ? "s" : ""} found`
+        setStatusMsg(loraList.length > 0
+          ? `Connected — ${loraList.length} LoRA${loraList.length !== 1 ? "s" : ""} found`
           : "Connected to ComfyUI"
         );
       } else {
@@ -116,6 +140,26 @@ export default function ChromaUI() {
   }, [serverUrl]);
 
   useEffect(() => { checkConnection(); }, []);
+
+  // ===========================================================================
+  // Reset model config to the active family's defaults whenever the family
+  // changes — Chroma and Krea2 models/samplers are not interchangeable.
+  // ===========================================================================
+  useEffect(() => {
+    const d = family.defaults;
+    setUnetName(d.unetName);
+    setClipName(d.clipName);
+    setVaeName(d.vaeName);
+    setSteps(d.steps);
+    setCfg(d.cfg);
+    if (d.shift !== undefined) setShift(d.shift);
+    if (d.betaAlpha !== undefined) setBetaAlpha(d.betaAlpha);
+    if (d.betaBeta !== undefined) setBetaBeta(d.betaBeta);
+    setInpaintDenoise(d.inpaintDenoise);
+    setInpaintContextExtend(d.inpaintContextExtend);
+    if (d.img2imgDenoise !== undefined) setImg2imgDenoise(d.img2imgDenoise);
+    setGenSize(family.canvasSizes[family.defaultCanvasIndex]);
+  }, [modelFamilyId]);
 
   // ===========================================================================
   // Canvas size — derived from the loaded image
@@ -219,7 +263,7 @@ export default function ChromaUI() {
     try {
       const { imageName, maskName } = await uploadCanvasAndMask();
 
-      const workflow = api.buildInpaintWorkflow({
+      const workflow = family.buildInpaint({
         imageName, maskName,
         contextExtendFactor: inpaintContextExtend,
         outputWidth: canvasSize.w,
@@ -228,13 +272,13 @@ export default function ChromaUI() {
         positive: "", negative: "", seed: 0, steps: 8, cfg: 1, denoise: 0.5,
         shift: DEFAULTS.inpaintShift,
         unetName, clipName, vaeName,
-        lora1, lora1Strength, lora2, lora2Strength,
+        loras: loras.slice(0, family.loraSlots),
       });
 
       const { prompt_id } = await api.queuePrompt(serverUrl, workflow);
       const outputs = await api.pollForCompletion(serverUrl, prompt_id, { steps: 1, maxAttempts: 30 });
 
-      const ctxImg = api.findOutputImage(outputs, "38");
+      const ctxImg = api.findOutputImage(outputs, family.outputNodes.inpaint.contextNode);
       if (ctxImg) {
         const url = api.getImageUrl(serverUrl, ctxImg.filename, ctxImg.subfolder, ctxImg.type);
         setContextImageUrl(url);
@@ -245,7 +289,7 @@ export default function ChromaUI() {
       setStatusMsg(`Context preview failed: ${err.message}`);
     }
   }, [connected, currentImage, serverUrl, inpaintContextExtend, canvasSize, uploadCanvasAndMask,
-      unetName, clipName, vaeName, lora1, lora1Strength, lora2, lora2Strength]);
+      family, unetName, clipName, vaeName, loras]);
 
   // Re-run context preview when the context extend factor changes (if mask is active)
   useEffect(() => {
@@ -297,7 +341,42 @@ export default function ChromaUI() {
   }, [serverUrl, currentImage, canvasSize]);
 
   // ===========================================================================
-  // Generate (txt2img, inpaint, or upscale depending on mode)
+  // Img2Img source — from a local file or the current canvas image. The crop
+  // resets and the crop editor opens so the user can frame it right away.
+  // ===========================================================================
+  const setImg2imgSourceFromUrl = useCallback(async (url, name) => {
+    try {
+      const size = await loadImageSize(url);
+      setImg2imgSource((prev) => {
+        if (prev?.url.startsWith("blob:") && prev.url !== url) URL.revokeObjectURL(prev.url);
+        return { url, name, ...size };
+      });
+      setImg2imgCrop(DEFAULT_CROP);
+      setImg2imgEnabled(true);
+      setCropEditorOpen(true);
+    } catch (err) {
+      setStatusMsg(`Img2Img: ${err.message}`);
+    }
+  }, []);
+
+  const handleImg2imgLoadFile = useCallback((file) => {
+    if (file) setImg2imgSourceFromUrl(URL.createObjectURL(file), file.name);
+  }, [setImg2imgSourceFromUrl]);
+
+  const handleImg2imgUseCanvas = useCallback(() => {
+    if (currentImage) setImg2imgSourceFromUrl(currentImage, currentImageFilename || "canvas");
+  }, [currentImage, currentImageFilename, setImg2imgSourceFromUrl]);
+
+  const handleImg2imgClear = useCallback(() => {
+    setImg2imgSource((prev) => {
+      if (prev?.url.startsWith("blob:")) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+    setImg2imgEnabled(false);
+  }, []);
+
+  // ===========================================================================
+  // Generate (txt2img, img2img, inpaint, or upscale depending on mode)
   // ===========================================================================
   const handleGenerate = useCallback(async () => {
     if (!connected) { setStatusMsg("Not connected to ComfyUI"); return; }
@@ -305,6 +384,10 @@ export default function ChromaUI() {
 
     const isUpscale = activeTool === "upscale";
     if (isUpscale && !currentImage) { setStatusMsg("Generate an image first before upscaling"); return; }
+    if (isUpscale && !family.supportsUpscale) {
+      setStatusMsg(`${family.label} doesn't support upscale — try a native high-res size instead`);
+      return;
+    }
 
     abortControllerRef.current = new AbortController();
     setGenerating(true);
@@ -328,12 +411,12 @@ export default function ChromaUI() {
         const imageName = await uploadCurrentImage();
 
         setStatusMsg("Upscaling...");
-        workflow = api.buildUpscaleWorkflow({
+        workflow = family.buildUpscale({
           imageName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg, shift,
           denoise: upscaleDenoise,
           unetName, clipName, vaeName,
-          lora1, lora1Strength, lora2, lora2Strength,
+          loras: loras.slice(0, family.loraSlots),
           upscaleBy, tileWidth: upscaleTileWidth, tileHeight: upscaleTileHeight,
           upscaleModelName: DEFAULTS.upscaleModelName,
         });
@@ -345,45 +428,78 @@ export default function ChromaUI() {
         const { imageName, maskName } = await uploadCanvasAndMask();
 
         setStatusMsg("Generating inpaint...");
-        workflow = api.buildInpaintWorkflow({
+        workflow = family.buildInpaint({
           imageName, maskName, positive: effectivePositive, negative,
           seed: actualSeed, steps, cfg,
           denoise: inpaintDenoise,
           shift: DEFAULTS.inpaintShift,
           unetName, clipName, vaeName,
-          lora1, lora1Strength, lora2, lora2Strength,
+          loras: loras.slice(0, family.loraSlots),
           contextExtendFactor: inpaintContextExtend,
           outputWidth: canvasSize.w,
           outputHeight: canvasSize.h,
           contextOnly: false,
         });
       } else {
-        // ---- TXT2IMG ----
+        // ---- TXT2IMG / IMG2IMG ----
+        // Img2img reuses the txt2img graph with the empty latent swapped for the
+        // encoded source, cropped/scaled client-side to exactly genSize.
+        let initImageName;
+        if (family.supportsImg2Img && img2imgEnabled) {
+          if (!img2imgSource) throw new Error("Img2Img is on but no source image is loaded");
+          genType = "img2img";
+          setStatusMsg("Uploading img2img source...");
+          const blob = await renderCrop(img2imgSource, img2imgCrop, genSize.w, genSize.h);
+          initImageName = (await api.uploadImage(serverUrl, blob, "chroma_img2img_source.png")).fullName;
+        }
+
         setStatusMsg("Generating...");
-        workflow = api.buildTxt2ImgWorkflow({
+        workflow = family.buildTxt2Img({
           positive: effectivePositive, negative,
           width: genSize.w, height: genSize.h,
           seed: actualSeed, steps, cfg, shift,
           unetName, clipName, vaeName,
-          lora1, lora1Strength, lora2, lora2Strength,
+          loras: loras.slice(0, family.loraSlots),
           betaAlpha, betaBeta,
+          initImageName, denoise: img2imgDenoise,
         });
       }
 
-      const { prompt_id } = await api.queuePrompt(serverUrl, workflow);
-      const outputs = await api.pollForCompletion(serverUrl, prompt_id, {
-        steps, onProgress: setProgress, signal: abortControllerRef.current.signal,
+      const { prompt_id } = await api.queuePrompt(serverUrl, workflow, clientIdRef.current);
+
+      // Real per-step progress from ComfyUI's WebSocket, when available — the
+      // time-based estimate below stays as a fallback until (or unless) it
+      // delivers a real value.
+      let wsHasData = false;
+      const closeProgressSocket = api.openProgressSocket(serverUrl, {
+        clientId: clientIdRef.current,
+        promptId: prompt_id,
+        onProgress: (value, max) => {
+          wsHasData = true;
+          setProgress(Math.min(99, (value / max) * 100));
+        },
       });
+
+      let outputs;
+      try {
+        outputs = await api.pollForCompletion(serverUrl, prompt_id, {
+          steps,
+          onProgress: (pct) => { if (!wsHasData) setProgress(pct); },
+          signal: abortControllerRef.current.signal,
+        });
+      } finally {
+        closeProgressSocket();
+      }
 
       console.log("[Chroma] Generation outputs:", JSON.stringify(Object.keys(outputs)));
       for (const [nodeId, out] of Object.entries(outputs)) {
         if (out.images) console.log(`[Chroma]   Node ${nodeId}: ${out.images.length} image(s) — ${out.images[0]?.filename}`);
       }
 
-      // For inpaint, get node 7 (stitched result), skip node 38 (context preview).
-      // For txt2img and upscale, get node 740.
-      const preferredNode = isInpaint ? "7" : "740";
-      const skipNodes = isInpaint ? ["38"] : [];
+      // For inpaint, get the stitched result node, skipping the context preview node.
+      // For txt2img and upscale, get the family's txt2img output node.
+      const preferredNode = isInpaint ? family.outputNodes.inpaint.node : family.outputNodes.txt2img.node;
+      const skipNodes = isInpaint ? family.outputNodes.inpaint.skip : [];
       const img = api.findOutputImage(outputs, preferredNode, skipNodes);
 
       if (img) {
@@ -417,9 +533,10 @@ export default function ChromaUI() {
   }, [
     connected, positive, negative, selectedStyle, seed, steps, cfg, shift, hasMask, currentImage,
     activeTool, serverUrl, canvasSize, genSize, unetName, clipName, vaeName,
-    lora1, lora1Strength, lora2, lora2Strength,
+    family, loras,
     betaAlpha, betaBeta, inpaintDenoise, inpaintContextExtend,
     upscaleBy, upscaleTileWidth, upscaleTileHeight, upscaleDenoise,
+    img2imgEnabled, img2imgSource, img2imgCrop, img2imgDenoise,
     uploadCanvasAndMask, uploadCurrentImage,
   ]);
 
@@ -439,7 +556,8 @@ export default function ChromaUI() {
       <MenuBar connected={connected} />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <Toolbar activeTool={activeTool} setActiveTool={setActiveTool} onGenerate={handleGenerate} />
+        <Toolbar activeTool={activeTool} setActiveTool={setActiveTool} onGenerate={handleGenerate}
+          disabledTools={family.supportsUpscale ? [] : ["upscale"]} />
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <Canvas
@@ -473,13 +591,11 @@ export default function ChromaUI() {
           selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle}
           serverUrl={serverUrl} setServerUrl={setServerUrl}
           connected={connected} checking={checking} onCheckConnection={checkConnection}
+          modelFamilyId={modelFamilyId} setModelFamilyId={setModelFamilyId} family={family}
           unetName={unetName} setUnetName={setUnetName}
           clipName={clipName} setClipName={setClipName}
           vaeName={vaeName} setVaeName={setVaeName}
-          lora1={lora1} setLora1={setLora1}
-          lora1Strength={lora1Strength} setLora1Strength={setLora1Strength}
-          lora2={lora2} setLora2={setLora2}
-          lora2Strength={lora2Strength} setLora2Strength={setLora2Strength}
+          loras={loras} setLoraName={setLoraName} setLoraStrength={setLoraStrength}
           availableLoras={availableLoras}
           availableUnets={availableUnets}
           availableClips={availableClips}
@@ -493,10 +609,29 @@ export default function ChromaUI() {
           generatedImages={generatedImages} currentImage={currentImage}
           setCurrentImage={(url, filename) => { setCurrentImage(url); setCurrentImageFilename(filename ?? null); }}
           contextImageUrl={contextImageUrl}
+          img2img={{
+            enabled: img2imgEnabled, setEnabled: setImg2imgEnabled,
+            denoise: img2imgDenoise, setDenoise: setImg2imgDenoise,
+            source: img2imgSource, crop: img2imgCrop,
+            canUseCanvas: !!currentImage,
+            onLoadFile: handleImg2imgLoadFile,
+            onUseCanvas: handleImg2imgUseCanvas,
+            onClear: handleImg2imgClear,
+            onEditCrop: () => setCropEditorOpen(true),
+          }}
         />
       </div>
 
       <StatusBar statusMsg={statusMsg} canvasSize={canvasSize} activeTool={activeTool} zoom={zoom} />
+
+      {cropEditorOpen && img2imgSource && (
+        <CropEditor
+          source={img2imgSource} crop={img2imgCrop}
+          targetW={genSize.w} targetH={genSize.h}
+          onChange={setImg2imgCrop}
+          onClose={() => setCropEditorOpen(false)}
+        />
+      )}
     </div>
   );
 }
