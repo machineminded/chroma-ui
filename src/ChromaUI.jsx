@@ -108,6 +108,10 @@ export default function ChromaUI() {
   const deleteHistoryEntry = useCallback((id) => {
     setPromptHistory((prev) => prev.filter((h) => h.id !== id));
   }, []);
+  // Starred entries survive a clear, same as they survive the cap
+  const clearPromptHistory = useCallback(() => {
+    setPromptHistory((prev) => prev.filter((h) => h.starred));
+  }, []);
 
   // Load a saved prompt (history entry or a generated image's prompt) into the active tab
   const loadPromptIntoTab = useCallback(({ positive, negative, style }) => {
@@ -697,6 +701,7 @@ export default function ChromaUI() {
             promptHistory={promptHistory}
             onLoadHistory={loadPromptIntoTab} onOpenHistoryInNewTab={openPromptInNewTab}
             onToggleHistoryStar={toggleHistoryStar} onDeleteHistory={deleteHistoryEntry}
+            onClearHistory={clearPromptHistory}
           />
         </div>
 

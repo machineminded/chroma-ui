@@ -8,7 +8,7 @@ export default function PromptBar({
   // Prompt tabs
   promptTabs, activePromptTabId, onSelectTab, onAddTab, onCloseTab, onRenameTab, onGenerateAll,
   // Prompt history
-  promptHistory, onLoadHistory, onOpenHistoryInNewTab, onToggleHistoryStar, onDeleteHistory,
+  promptHistory, onLoadHistory, onOpenHistoryInNewTab, onToggleHistoryStar, onDeleteHistory, onClearHistory,
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const buttonLabel = generating ? "..." : activeTool === "upscale" ? "Upscale" : hasMask ? "Inpaint" : "Generate";
@@ -96,7 +96,7 @@ export default function PromptBar({
             <PromptHistory
               history={promptHistory}
               onLoad={onLoadHistory} onOpenInNewTab={onOpenHistoryInNewTab}
-              onToggleStar={onToggleHistoryStar} onDelete={onDeleteHistory}
+              onToggleStar={onToggleHistoryStar} onDelete={onDeleteHistory} onClear={onClearHistory}
               onClose={() => setHistoryOpen(false)}
             />
           )}

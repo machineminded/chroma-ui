@@ -15,8 +15,11 @@ function timeAgo(ts) {
  * Searchable popover of previously generated prompts, newest first (starred
  * entries pinned to the top). Click an entry to load it into the active tab.
  */
-export default function PromptHistory({ history, onLoad, onOpenInNewTab, onToggleStar, onDelete, onClose }) {
+export default function PromptHistory({ history, onLoad, onOpenInNewTab, onToggleStar, onDelete, onClear, onClose }) {
   const [query, setQuery] = useState("");
+  // Clear is two-click: the first click arms it, moving the mouse away disarms it
+  const [confirmClear, setConfirmClear] = useState(false);
+  const clearableCount = history.filter((h) => !h.starred).length;
   const rootRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -60,6 +63,25 @@ export default function PromptHistory({ history, onLoad, onOpenInNewTab, onToggl
         <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
           placeholder="Search prompt history..." style={inputStyle} />
         <span style={{ fontSize: 9, color: COLORS.textDimmer, whiteSpace: "nowrap" }}>{history.length} saved</span>
+        <button
+          disabled={clearableCount === 0}
+          onClick={() => {
+            if (!confirmClear) return setConfirmClear(true);
+            onClear();
+            setConfirmClear(false);
+          }}
+          onMouseLeave={() => setConfirmClear(false)}
+          title="Remove all unstarred prompts (starred ones are kept)"
+          style={{
+            background: confirmClear ? "#ef444422" : "transparent",
+            border: `1px solid ${confirmClear ? "#ef4444" : COLORS.border}`, borderRadius: 4,
+            padding: "3px 8px", fontSize: 10, fontFamily: "inherit", whiteSpace: "nowrap",
+            color: confirmClear ? "#ef4444" : COLORS.textDimmer,
+            cursor: clearableCount === 0 ? "default" : "pointer", opacity: clearableCount === 0 ? 0.4 : 1,
+          }}
+        >
+          {confirmClear ? `Clear ${clearableCount}?` : "Clear"}
+        </button>
       </div>
 
       <div style={{ overflowY: "auto" }}>
