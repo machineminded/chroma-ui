@@ -479,7 +479,11 @@ function StrengthInput({ strength, onStrengthChange }) {
 function SearchableSelect({ value, onChange, options, noneLabel = "(none)", placeholder = "Search...", formatOption = (v) => v }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // Viewport rect of the trigger button; the popup is position:fixed so it can
+  // grow wider than the (overflow:hidden) side panel to fit long option names.
+  const [anchor, setAnchor] = useState(null);
   const containerRef = useRef(null);
+  const buttonRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -488,11 +492,20 @@ function SearchableSelect({ value, onChange, options, noneLabel = "(none)", plac
       if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
     };
     const onKeyDown = (e) => { if (e.key === "Escape") setOpen(false); };
+    // A fixed-position popup would detach from its button on scroll/resize, so just close it
+    const onScrollOrResize = (e) => {
+      if (containerRef.current && containerRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
     return () => {
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
     };
   }, [open]);
 
@@ -517,8 +530,13 @@ function SearchableSelect({ value, onChange, options, noneLabel = "(none)", plac
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        title={displayLabel}
+        onClick={() => {
+          if (!open) setAnchor(buttonRef.current.getBoundingClientRect());
+          setOpen((o) => !o);
+        }}
         style={{
           ...selectStyle, textAlign: "left", display: "flex",
           justifyContent: "space-between", alignItems: "center",
@@ -528,10 +546,12 @@ function SearchableSelect({ value, onChange, options, noneLabel = "(none)", plac
         <span style={{ color: COLORS.textDimmer, marginLeft: 6, fontSize: 9 }}>▾</span>
       </button>
 
-      {open && (
+      {open && anchor && (
         <div
           style={{
-            position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20,
+            // Right-aligned to the button and growing leftward (the panel sits at the window's right edge)
+            position: "fixed", top: anchor.bottom + 4, right: window.innerWidth - anchor.right, zIndex: 20,
+            width: "max-content", minWidth: anchor.width, maxWidth: anchor.right - 8,
             background: COLORS.bgDarker, border: `1px solid ${COLORS.border}`,
             borderRadius: 4, boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
             display: "flex", flexDirection: "column", maxHeight: 240, overflow: "hidden",
@@ -565,6 +585,7 @@ function SearchableOption({ label, selected, onClick }) {
   return (
     <div
       onClick={onClick}
+      title={label}
       style={{
         padding: "6px 10px", fontSize: 11, cursor: "pointer",
         color: selected ? COLORS.accent : COLORS.text,
